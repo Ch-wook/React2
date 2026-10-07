@@ -1,203 +1,275 @@
-# Ch-wook
+# Ch-wook · React2
 
-## 2026-09-30 (5주차)
+---
 
-### 1. 네비게이션이 동작하는 과정
+## 2026-09-30 (Week 5)
 
-페이지 이동을 이해할 때는 화면을 만드는 시점과 이동하는 방식을 나누어 생각한다.
+### 1. How Navigation Works
 
-| 개념 | 하는 일 |
-| --- | --- |
-| Server Rendering | 서버에서 화면에 필요한 결과를 만든다 |
-| Prefetching | 이동할 가능성이 있는 경로를 클릭 전에 가져온다 |
-| Streaming | 먼저 준비된 화면부터 보내고 나머지를 이어서 보낸다 |
-| Client-side Transition | 문서 전체를 새로 받는 대신 필요한 화면을 바꾼다 |
+Next.js의 네비게이션은 다음 네 가지 기능이 함께 동작하는 구조다.
 
-이 기능들이 함께 동작해서 서버의 응답을 기다리는 시간을 줄이거나, 기다리는 동안에도 화면을 사용할 수 있게 한다.
+- Server Rendering
+- Prefetching
+- Streaming
+- Client-side Transition
 
-### 2. 서버 렌더링과 최초 방문
+---
 
-App Router의 `page.tsx`와 `layout.tsx`는 기본적으로 Server Component다. 서버 렌더링은 **언제 결과를 만드는지**에 따라 구분한다.
+#### 1.1 Server Rendering
 
-- **정적 렌더링**: 빌드 시점이나 재검증 시점에 결과를 미리 만들고 재사용한다.
-- **동적 렌더링**: 요청이 들어온 뒤 요청 정보에 맞춰 결과를 만든다.
+App Router의 `layout`과 `page`는 기본적으로 React Server Component다. 서버에서 만든 RSC Payload를 클라이언트에 전달하며, 화면을 준비하는 시점에 따라 렌더링 방식을 구분한다.
 
-처음 접속할 때는 서버가 만든 HTML을 먼저 보여줄 수 있다. 이후 클라이언트 컴포넌트에 필요한 JavaScript가 연결되면서 상호작용이 가능해지는데, 이 과정을 hydration이라고 한다.
+- **Static Rendering**: 빌드 또는 재검증 과정에서 결과를 준비해 캐시한다.
+- **Dynamic Rendering**: 요청이 들어오면 해당 요청에 맞춰 결과를 만든다.
 
-Server Component인지와 정적·동적으로 렌더링되는지는 별개의 기준이다. 서버 컴포넌트도 요청마다 렌더링할 수 있다.
+서버에서 화면을 준비하는 동안 새 경로의 표시가 늦어질 수 있다. Next.js는 프리페칭과 클라이언트 측 전환을 함께 사용해 이 대기를 줄인다.
 
-### 3. Prefetching
+##### Initial Visit
 
-프리페칭은 사용자가 링크를 누르기 전에 다음 경로에 필요한 내용을 가져오는 기능이다. `next/link`의 `Link`는 이 기능을 지원한다.
+CSR만 사용하는 앱에서는 브라우저가 JavaScript를 실행한 뒤 본문을 구성한다. Next.js는 첫 방문에 HTML도 제공하므로 JavaScript가 모두 실행되기 전부터 내용을 표시할 수 있다.
+
+이후 hydration을 통해 클라이언트 컴포넌트의 상호작용이 연결된다. 초기 콘텐츠 표시와 검색 엔진의 내용 확인에 도움이 된다.
+
+---
+
+#### 1.2 Prefetching
+
+사용자가 이동할 가능성이 있는 경로를 미리 가져오는 작업이다. 링크를 누를 때 필요한 결과가 준비되어 있으면 더 빠르게 페이지를 전환할 수 있다.
 
 ```tsx
 import Link from "next/link";
 
-export default function Menu() {
+export default function Navigation() {
   return (
     <nav>
-      <Link href="/blog">블로그</Link>
-      <Link href="/streaming" prefetch={false}>스트리밍 실습</Link>
+      <Link href="/blog">Blog</Link>
+      <a href="/contact">Contact</a>
     </nav>
   );
 }
 ```
 
-- 기본 자동 프리페칭은 프로덕션 모드에서 확인한다.
-- 정적 경로는 전체 내용을 미리 가져올 수 있다.
-- 동적 경로는 프리페칭을 건너뛰거나 `loading.tsx` 경계까지 일부를 가져올 수 있다.
-- `prefetch={false}`는 해당 링크의 프리페칭을 끈다.
-- 일반 `<a>`에는 Next.js의 자동 프리페칭이 적용되지 않는다.
+- `Link`: Next.js의 프리페칭과 클라이언트 측 전환을 지원한다.
+- `a`: 일반 링크이며 Next.js의 자동 프리페칭을 제공하지 않는다.
+- 정적 경로는 전체 경로를 미리 가져올 수 있다.
+- 동적 경로는 프리페칭을 생략하거나 `loading.tsx`가 있으면 일부를 가져올 수 있다.
 
-실습에서는 로딩 화면을 관찰하기 위해 `/streaming` 링크의 프리페칭을 껐다. 캐시와 프리페칭 설정에 따라 실제 동작은 달라질 수 있다.
+방문하지 않을 동적 경로까지 모두 처리하지 않도록 서버 작업량을 줄이는 방식이다. 자동 프리페칭은 프로덕션 환경에서 확인한다.
 
-### 4. Streaming과 loading.tsx
+---
 
-페이지 전체가 준비될 때까지 빈 화면으로 기다리는 대신, 공통 레이아웃이나 로딩 화면을 먼저 보여준다. 본문이 준비되면 로딩 화면을 실제 내용으로 바꾼다.
+#### 1.3 Streaming
 
-```text
-src/app/streaming/
-├─ loading.tsx  → 기다리는 동안 표시
-└─ page.tsx     → 준비가 끝나면 표시
-```
+스트리밍은 전체 작업이 끝날 때까지 기다리지 않고 먼저 준비된 UI를 보내는 방식이다. 일부 데이터가 늦게 준비되어도 공통 화면이나 로딩 UI를 먼저 사용할 수 있다.
+
+동적 경로에서 먼저 전달할 수 있는 요소는 다음과 같다.
+
+- 공유 레이아웃
+- 로딩 안내
+- 콘텐츠 형태를 미리 보여주는 스켈레톤
+
+##### loading.tsx
 
 ```tsx
-// loading.tsx
 export default function Loading() {
-  return <p role="status">본문을 준비하고 있습니다…</p>;
+  return <p>Loading...</p>;
 }
 ```
 
-`loading.tsx`를 두면 Next.js가 해당 페이지와 하위 구간을 Suspense 경계로 감싼다. 같은 폴더의 `layout.tsx` 자체를 감싸는 것은 아니다. 레이아웃에서 오래 걸리는 작업을 수행하면 별도의 Suspense 경계가 필요할 수 있다.
+라우트 폴더에 `loading.tsx`를 만들면 Next.js가 페이지와 그 아래의 콘텐츠를 Suspense 경계로 처리한다. 준비가 끝나면 로딩 UI를 실제 내용으로 교체한다. 화면 일부에만 적용하려면 직접 `<Suspense>`를 사용할 수도 있다.
 
-현재 프로젝트의 `streaming/page.tsx`에는 동작을 관찰하기 위한 보완 예제를 넣었다.
+##### Shared Layouts / Interruptible Navigation
 
-```tsx
-import { connection } from "next/server";
+- 새 페이지가 준비되는 동안 공유 레이아웃을 유지한다.
+- 메뉴나 사이드바 등 공유 UI를 계속 사용할 수 있다.
+- 로딩이 끝나기 전 다른 경로로 이동할 수 있다.
+- 이동을 바꾸는 것과 서버에서 이미 시작한 모든 작업을 취소하는 것은 구분한다.
 
-export default async function StreamingPage() {
-  await connection();
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+##### 웹 성능 지표
 
-  return <h1>준비된 화면부터 보여주기</h1>;
-}
-```
-
-`connection()` 이후는 요청이 들어온 뒤 실행한다. 2초 지연은 실습용이며, 실제 서비스에서 불필요한 지연을 추가할 이유는 없다.
-
-### 5. 클라이언트 측 페이지 전환
-
-`Link`로 이동하면 공유되는 레이아웃을 유지하면서 바뀐 경로의 화면을 표시할 수 있다. `/blog`에서 글 상세 페이지로 이동할 때 블로그 메뉴가 공통으로 남는 것이 이 예다.
-
-- 공유 레이아웃의 클라이언트 상태와 상호작용을 유지할 수 있다.
-- 로딩 중에도 다른 메뉴를 선택해 이동을 바꿀 수 있다.
-- 모든 페이지의 상태가 무조건 유지되는 것은 아니다.
-- 이동을 바꿀 수 있다는 것이 이미 시작한 모든 서버 작업의 취소를 보장하지는 않는다.
-
-### 6. 이동이 느릴 때 확인할 부분
-
-| 상황 | 확인할 내용 |
+| 지표 | 의미 |
 | --- | --- |
-| 동적 페이지가 응답할 때까지 화면 변화가 없음 | `loading.tsx`를 적절한 경로에 두었는지 확인 |
-| 미리 만들 수 있는 글도 요청마다 준비함 | `generateStaticParams`로 경로를 사전 생성할 수 있는지 확인 |
-| loading 파일이 있는데도 로딩 화면이 안 나옴 | 오래 걸리는 작업이 같은 구간의 layout에 있는지 확인 |
-| 개발 모드에서 프리페칭 요청이 안 보임 | 빌드 후 프로덕션 모드에서 확인 |
+| TTFB | 요청 후 첫 응답 바이트까지 걸리는 시간 |
+| FCP | 첫 콘텐츠가 화면에 표시되는 시점 |
+| TTI | 상호작용 가능한 시점을 설명하는 기존 성능 지표 |
+| LCP | 가장 큰 콘텐츠가 화면에 표시되는 시점 |
+| CLS | 예상치 못한 레이아웃 이동 정도 |
+| INP | 사용자 입력에 화면이 반응하는 지연 |
 
-### 7. generateStaticParams
+수업 자료에 등장하는 FID는 첫 입력의 응답 지연을 측정한 지표다. 현재 Core Web Vitals에서는 FID 대신 INP를 사용하며, LCP·INP·CLS를 함께 본다.
 
-동적 세그먼트에 들어갈 값을 미리 알고 있다면 빌드 시 생성할 경로를 반환한다.
+---
+
+#### 1.4 Client-side Transition
+
+일반적인 문서 이동에서는 페이지 전체를 새로 불러오므로 기존 화면의 상태가 초기화될 수 있다. Next.js의 `Link`는 공유 UI를 유지하고 바뀐 경로에 필요한 화면을 갱신한다.
+
+- 공유 레이아웃과 메뉴 유지
+- 미리 받아 둔 페이지 또는 로딩 UI 표시
+- 준비된 콘텐츠로 화면 교체
+
+서버 렌더링을 사용하면서도 SPA와 같은 자연스러운 이동 경험을 제공할 수 있다. 다만 모든 페이지의 상태나 스크롤을 항상 보존한다는 뜻은 아니다.
+
+---
+
+### 2. 전환을 느리게 만드는 요인
+
+#### 2.1 loading.tsx가 없는 동적 경로
+
+요청 시점에 렌더링하는 경로는 서버 응답이 도착하기 전까지 변화가 없어 보일 수 있다. `loading.tsx`를 추가하면 로딩 상태를 먼저 표시하고 부분 프리페칭을 활용할 수 있다.
+
+공유 레이아웃을 유지하면서 준비 중임을 알려 주는 것이 핵심이다.
+
+#### 2.2 generateStaticParams가 없는 동적 세그먼트
+
+블로그 글처럼 주소 값을 미리 알 수 있는 데이터는 `generateStaticParams`로 빌드할 경로를 지정한다.
 
 ```tsx
-// src/app/blog/[slug]/page.tsx
 import { posts } from "../posts";
 
 export function generateStaticParams() {
   return posts.map((post) => ({ slug: post.slug }));
 }
 
-export const dynamicParams = false;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  return <h1>{slug}</h1>;
+}
 ```
 
-현재 프로젝트는 `nextjs`, `routing`, `ssr-ssg`, `dynamic-routes` 네 경로를 만든다. `dynamicParams = false`이므로 목록에 없는 slug는 허용하지 않는다.
-
-`[slug]`처럼 동적 세그먼트를 사용해도 정적 생성이 가능하다. 다만 요청 전용 API를 사용하는지에 따라 렌더링 방식이 달라지므로, 함수 하나만 추가하면 항상 정적 페이지가 된다고 생각하면 안 된다.
-
-### 8. 웹 성능 지표
-
-| 지표 | 살펴보는 내용 |
-| --- | --- |
-| LCP | 화면에서 가장 큰 콘텐츠가 표시되는 시점 |
-| INP | 사용자 상호작용에 화면이 반응하는 지연 |
-| CLS | 콘텐츠가 예상치 않게 움직이는 정도 |
-| TTFB | 첫 응답 바이트를 받기까지의 시간 |
-| FCP | 첫 콘텐츠가 화면에 표시되는 시점 |
-
-Core Web Vitals는 LCP·INP·CLS다. 예전 자료의 FID는 현재 INP로 대체됐다. TTFB와 FCP는 별도의 성능 지표로 구분한다. [공식 Web Vitals 설명](https://web.dev/articles/vitals)
-
-**실습 확인**: `/streaming`에서 로딩 화면과 본문 교체를 확인하고, `npm.cmd run build` 출력에서 블로그 글의 정적 생성을 확인한다.
-
-참고: [링크와 내비게이션](https://nextjs.org/docs/app/getting-started/linking-and-navigating), [loading 규칙](https://nextjs.org/docs/app/api-reference/file-conventions/loading), [generateStaticParams](https://nextjs.org/docs/app/api-reference/functions/generate-static-params)
+반환값은 slug 문자열 배열이 아니라 `{ slug: 값 }` 형태의 객체 배열이다. 동적 세그먼트라도 사전 생성할 수 있으며, 요청 정보가 필요한 경우에는 사용하는 API와 설정에 따라 동적 렌더링한다.
 
 ---
 
-## 2026-09-23 (4주차)
+### 3. Route 방식 비교
 
-### 1. Link 컴포넌트
+| 구분 | React의 일반적인 라우팅 구성 | Next.js |
+| --- | --- | --- |
+| 경로 정의 | 라우터 라이브러리 등으로 직접 구성 | 폴더와 파일로 정의 |
+| 예시 | 경로와 컴포넌트를 코드로 연결 | `app/about/page.tsx` → `/about` |
 
-`Link`는 HTML의 `<a>`를 바탕으로 프리페칭과 클라이언트 측 페이지 전환을 제공하는 Next.js 컴포넌트다. 이동할 주소를 `href`에 전달한다.
+| 구분 | Pages Router | App Router |
+| --- | --- | --- |
+| 기준 폴더 | `pages` | `app` |
+| 페이지 예시 | `pages/about.tsx` | `app/about/page.tsx` |
+| 주요 기능 | `getStaticProps` 등 | 중첩 레이아웃, 서버 컴포넌트, 로딩·에러 UI, 병렬 라우트 |
+
+수업은 App Router를 기준으로 진행한다. 기존 Pages Router 프로젝트는 해당 방식의 문서와 API를 구분해서 읽는다.
+
+---
+
+## 2026-09-23 (Week 4)
+
+### 1. Link Component
+
+`Link`는 HTML 링크를 확장해 페이지 전환과 프리페칭을 제공한다. `next/link`에서 가져오며 `href`로 이동할 위치를 지정한다.
 
 ```tsx
 import Link from "next/link";
 
-export default function Menu() {
+export default function Page() {
+  return <Link href="/blog">Blog</Link>;
+}
+```
+
+#### 1.1 href
+
+문자열 경로뿐 아니라 경로와 쿼리를 분리한 객체도 전달할 수 있다.
+
+```tsx
+<Link href="/products?id=1&name=keyboard">상품</Link>
+
+<Link href={{ pathname: "/products", query: { id: "1", name: "keyboard" } }}>
+  상품
+</Link>
+```
+
+---
+
+### 2. Creating a Layout
+
+루트 레이아웃은 전체 화면을 감싸며 `html`, `body`를 포함한다. `children`에는 해당 경로의 페이지나 중첩 레이아웃이 들어간다.
+
+```tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <nav>
-      <Link href="/blog">블로그</Link>
-      <Link href={{ pathname: "/products", query: { id: "2", name: "마우스" } }}>
-        상품 보기
-      </Link>
-    </nav>
+    <html lang="ko">
+      <body>
+        <header>Root Layout Header</header>
+        <main>{children}</main>
+        <footer>Root Layout Footer</footer>
+      </body>
+    </html>
   );
 }
 ```
 
-문자열 주소를 넣을 수도 있고, `pathname`과 `query`를 가진 객체를 넣을 수도 있다.
+하위 경로의 레이아웃은 필요할 때 추가한다. 루트에 쓰는 `RootLayout`이라는 함수 이름 자체가 필수 규칙인 것은 아니다.
 
-### 2. 중첩 라우트
+---
 
-폴더를 중첩하면 주소도 단계별로 구성된다. 폴더는 경로 구간을 정하고 `page.tsx`는 그 주소에 표시할 화면을 정한다.
+### 3. Creating a Nested Route
+
+중첩 라우트는 여러 URL 구간으로 구성된 경로다. 폴더를 중첩해 주소 구조를 만들고 `page.tsx`로 해당 위치의 화면을 정의한다.
 
 ```text
-src/app/
+app/
 ├─ layout.tsx
 ├─ page.tsx                 → /
 └─ blog/
-   ├─ layout.tsx           → 목록과 상세가 공유
+   ├─ layout.tsx           → 블로그 공통 영역
    ├─ page.tsx             → /blog
    ├─ posts.tsx            → 예제 데이터
    └─ [slug]/
       └─ page.tsx          → /blog/nextjs 등
 ```
 
-`blog/layout.tsx`는 `/blog`와 `/blog/[slug]`를 함께 감싼다. 각 하위 폴더마다 layout을 반드시 만들 필요는 없다.
+`blog/layout.tsx`는 목록 페이지와 글 상세 페이지를 함께 감싼다.
 
-### 3. slug와 동적 세그먼트
+#### 3.1 문서의 예제를 복사했을 때 발생하는 오류
 
-slug는 사람이 읽을 수 있는 페이지 식별 문자열이다. `[slug]` 폴더를 만들면 해당 위치의 주소 값이 `params.slug`로 전달된다.
-
-| 요청 주소 | params에서 얻는 값 |
-| --- | --- |
-| `/blog/nextjs` | `{ slug: "nextjs" }` |
-| `/blog/routing` | `{ slug: "routing" }` |
-
-폴더 이름을 `[id]`로 바꾸면 `params.id`로 읽는다. 이것은 params의 키를 정하는 규칙이며, 데이터 파일이나 DB의 필드 이름을 똑같이 강제하는 규칙은 아니다.
-
-### 4. Promise params와 await
-
-Next.js 15부터 `params`와 `searchParams`는 Promise 방식으로 바뀌었다. 현재 실습 버전에서도 값을 읽기 전에 `await`한다.
+공식 문서의 `@/lib/posts`, `@/ui/post`는 예제에서 가정한 파일이다. 실제 프로젝트에 없다면 import 오류가 난다. 우선 정적인 목록을 작성하거나 필요한 데이터와 컴포넌트 파일을 만들어야 한다.
 
 ```tsx
-import { notFound } from "next/navigation";
+export default function BlogPage() {
+  return (
+    <ul>
+      <li>Post 1</li>
+      <li>Post 2</li>
+      <li>Post 3</li>
+    </ul>
+  );
+}
+```
+
+---
+
+### 4. Dynamic Segments와 slug
+
+폴더 이름을 `[slug]`처럼 대괄호로 감싸면 URL에서 해당 위치의 값을 전달받는다. slug는 페이지를 식별하기 위한 읽기 쉬운 문자열이다.
+
+- `/blog/nextjs` → `params.slug`는 `nextjs`
+- `/blog/routing` → `params.slug`는 `routing`
+- `[id]`로 만들었다면 `params.id`로 접근
+
+동적 폴더명은 params의 키를 결정한다. 데이터의 필드 이름은 조회 코드에서 연결할 수 있다.
+
+#### 4.1 게시글 데이터와 상세 페이지
+
+```tsx
+// app/blog/posts.tsx
+export const posts = [
+  { slug: "nextjs", title: "Next.js 소개", content: "React 기반 프레임워크" },
+  { slug: "routing", title: "App Router", content: "파일과 폴더 기반 라우팅" },
+];
+```
+
+```tsx
+// app/blog/[slug]/page.tsx
 import { posts } from "../posts";
 
 export default async function BlogPostPage({
@@ -208,7 +280,7 @@ export default async function BlogPostPage({
   const { slug } = await params;
   const post = posts.find((post) => post.slug === slug);
 
-  if (!post) notFound();
+  if (!post) return <h1>게시글을 찾을 수 없습니다</h1>;
 
   return (
     <article>
@@ -219,294 +291,468 @@ export default async function BlogPostPage({
 }
 ```
 
-`async` 함수 안에서 `await`로 Promise의 결과를 얻고, 그 결과의 `slug`를 사용해 글을 찾는다. `Promise` 타입은 await 없이 잘못 접근하는 실수를 발견하는 데도 도움이 된다.
+#### 4.2 params와 async / await
 
-`posts.find()`는 작은 예제 데이터에서 사용하기 쉽다. 데이터가 커지면 필요한 항목을 DB에서 조회하는 등의 방법을 검토한다. 없는 글은 본문처럼 출력하지 않고 `notFound()`로 처리한다.
+Next.js 15부터 params가 Promise로 제공된다. 바로 `params.slug`를 읽으면 버전에 따라 비동기 접근 관련 오류가 발생하므로 `await params`로 값을 얻는다.
 
-### 5. searchParams로 검색 조건 읽기
+- `async`: 함수 안에서 await를 사용하도록 선언한다.
+- `{ params }`: props 중 params만 구조 분해해 받는다.
+- `Promise<{ slug: string }>`: 비동기 결과의 형태를 지정한다.
+- `.find()`: 배열에서 slug와 일치하는 항목을 찾는다.
 
-`params`는 경로에 들어간 값을 읽고, `searchParams`는 URL의 `?` 뒤에 있는 값을 읽는다.
+`.find()`는 데이터 수에 비례해 탐색하는 O(n) 방식이다. 작은 더미 데이터에서는 간단하며, 데이터가 커지면 DB 조회 등으로 필요한 항목을 가져오는 방법을 검토한다.
 
-| 구분 | 예시 | 값 |
-| --- | --- | --- |
-| `params` | `/blog/nextjs` | slug가 nextjs |
-| `searchParams` | `/products?id=1&name=keyboard` | id가 1, name이 keyboard |
+---
+
+### 5. Rendering with Search Params
+
+쿼리 문자열은 `?` 뒤에 오는 검색 조건이다. 필터링이나 페이지 번호처럼 같은 경로에서 다른 결과를 보여줄 때 사용한다.
+
+```text
+/products?id=1&name=keyboard
+/products?category=shoes&page=2
+```
 
 ```tsx
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string | string[]; name?: string | string[] }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const query = await searchParams;
-  const id = Array.isArray(query.id) ? query.id[0] : query.id;
-  const name = Array.isArray(query.name) ? query.name[0] : query.name;
+  const { id = "non id", name = "non name" } = await searchParams;
 
   return (
     <div>
-      <p>id: {id || "미입력"}</p>
-      <p>name: {name || "미입력"}</p>
+      <p>id: {id}</p>
+      <p>name: {name}</p>
     </div>
   );
 }
 ```
 
-- `?id=1&id=2`처럼 같은 키가 반복되면 배열이 될 수 있다. 이 실습에서는 첫 번째 값을 사용한다.
-- 서버 페이지의 `searchParams`는 일반 객체이며 `URLSearchParams` 인스턴스가 아니다.
-- 현재 앱에서 검색 매개변수를 읽는 `/products`는 요청 시점에 렌더링된다.
-- 클라이언트 컴포넌트에서 읽을 때는 `useSearchParams`를 사용할 수 있다.
-- 브라우저 이벤트에서 값을 읽는 경우에는 `new URLSearchParams(window.location.search)`를 사용할 수 있다. 서버에서 `window`를 사용하지 않는다.
+| 방식 | 사용하는 상황 |
+| --- | --- |
+| 서버 페이지의 `searchParams` | 조회·필터·페이지네이션에 검색 조건이 필요할 때 |
+| `useSearchParams` | 클라이언트 컴포넌트에서 쿼리를 읽을 때 |
+| `new URLSearchParams(window.location.search)` | 브라우저 이벤트나 콜백에서 현재 값을 읽을 때 |
 
-### 6. 문서 예제를 옮길 때
+`params`는 경로의 동적 구간, `searchParams`는 쿼리 문자열을 읽는다. 서버 페이지의 searchParams는 일반 객체이며, 요청에 따라 달라지므로 이를 읽는 부분은 요청 시점의 처리가 필요하다.
 
-예제의 `@/lib/posts`, `@/ui/post`가 내 프로젝트에 실제로 있는 파일인지 먼저 확인한다. 없는 파일을 import하면 실행되지 않는다. 현재 앱은 예제 데이터를 `src/app/blog/posts.tsx`에 두고 상대 경로로 가져온다.
+### 6. Route 방식
 
-**실습 확인**: `/blog/nextjs`, `/blog/not-a-post`, `/products?id=1&name=keyboard`, `/products?id=1&id=2`에 접속해 값과 없는 글 처리를 비교한다.
-
-참고: [페이지와 레이아웃](https://nextjs.org/docs/app/getting-started/layouts-and-pages), [params와 searchParams](https://nextjs.org/docs/app/api-reference/file-conventions/page)
+React에서는 라우터 라이브러리 등으로 경로를 구성하고, Next.js에서는 파일 기반 라우팅을 사용한다. App Router는 중첩 레이아웃과 서버 컴포넌트, 구간별 로딩·에러 UI를 함께 구성할 수 있다. 이 비교는 다음 주차의 네비게이션 동작으로 이어진다.
 
 ---
 
-## 2026-09-16 (3주차)
+## 2026-09-16 (Week 3)
 
-### 1. Open Graph Protocol
+### 1. Folder and File Conventions
 
-Open Graph는 링크를 공유할 때 표시할 제목, 설명, 이미지 등의 정보를 전달하는 방식이다.
+#### 1.1 Route Groups / Private Folders
 
-| 속성 | 의미 |
+- `(group)`: URL을 바꾸지 않고 폴더와 레이아웃을 묶는다.
+- `_folder`: 해당 폴더와 하위 폴더를 라우팅에서 제외한다.
+- 일반 폴더도 page나 route 파일이 없으면 그 자체로 공개 경로를 만들지 않는다.
+
+`app/(marketing)/about/page.tsx`의 주소는 `/about`이다. 그룹 이름이 빠지기 때문에 다른 위치에 같은 `/about` 경로를 중복해서 만들지 않도록 주의한다.
+
+#### 1.2 Parallel / Intercepting Routes
+
+여러 슬롯을 가진 화면이나 목록 위에 상세 모달을 여는 UI에 활용한다.
+
+| 표기 | 의미 |
 | --- | --- |
-| `og:title` | 공유 카드 제목 |
-| `og:description` | 공유 카드 설명 |
-| `og:image` | 미리보기 이미지 |
-| `og:url` | 대상 페이지 주소 |
-| `og:type` | website, article 등의 종류 |
+| `@folder` | 부모 레이아웃에서 표시하는 이름 있는 슬롯 |
+| `(.)folder` | 같은 레벨의 경로 가로채기 |
+| `(..)folder` | 한 단계 위의 경로 가로채기 |
+| `(..)(..)folder` | 두 단계 위의 경로 가로채기 |
+| `(...)folder` | app 루트 기준 경로 가로채기 |
 
-Next.js App Router에서는 `metadata`로 관리할 수 있다. 아래는 작성 방법 예시다.
+가로채기 라우트는 현재 화면의 맥락 안에서 다른 경로의 내용을 표시하는 데 사용한다.
 
-```tsx
-import type { Metadata } from "next";
+---
 
-export const metadata: Metadata = {
-  title: "Next.js 수업 기록",
-  description: "라우팅과 레이아웃을 정리한 수업 노트",
-  openGraph: {
-    title: "Next.js 수업 기록",
-    description: "라우팅과 레이아웃을 정리한 수업 노트",
-    type: "website",
-  },
-};
+### 2. Open Graph Protocol
+
+링크 공유 시 미리보기 제목·설명·이미지 등을 전달하는 규칙이다. Facebook에서 시작해 여러 SNS와 메신저에서 사용하지만 플랫폼마다 표시 방식은 다를 수 있다.
+
+```html
+<meta property="og:title" content="Next.js 수업 정리" />
+<meta property="og:description" content="라우팅과 레이아웃 학습 기록" />
+<meta property="og:type" content="website" />
 ```
 
-현재 프로젝트의 루트에는 기본 title과 description을 적용했다. 공유용 이미지와 Open Graph 설정은 위 예시로 구분해 기록한다.
+- `og:title`: 제목
+- `og:description`: 설명
+- `og:image`: 미리보기 이미지 주소
+- `og:url`: 페이지 주소
+- `og:type`: 콘텐츠 유형
 
-### 2. Colocation과 비공개 폴더
+---
 
-Colocation은 관련 파일을 사용하는 위치 가까이에 두는 방식이다. `blog` 폴더 안에 `posts.tsx`를 두면 블로그 코드와 데이터를 함께 찾기 쉽다.
+### 3. Organizing Your Project
 
-`app` 안의 모든 파일이 URL로 공개되는 것은 아니다. UI 경로는 `page.tsx`, HTTP 요청 처리는 `route.ts` 같은 예약 파일로 정해진다.
+UI 로직과 라우팅 로직을 구분하고, 관련 파일을 일관된 기준으로 배치한다. 라우팅 규칙을 지키면서 컴포넌트나 데이터 파일은 app 안팎으로 구성할 수 있다.
 
-`_components`처럼 폴더 앞에 `_`를 붙이면 해당 폴더와 하위 폴더가 라우팅 대상에서 제외된다. 내부 구현을 구분하는 규칙이며, 비밀 정보를 보호하는 기능은 아니다.
+#### 3.1 Colocation
 
-### 3. Route Groups
+함께 사용하는 파일을 같은 기능 폴더 가까이에 두는 방식이다. 예를 들어 블로그 페이지와 게시글 데이터를 같은 폴더에 두면 관련 내용을 찾기 쉽다.
 
-`(marketing)`처럼 괄호로 묶은 폴더는 파일을 그룹으로 정리하면서 URL에는 이름을 넣지 않는다.
+#### 3.2 Component Hierarchy
+
+수업에서 다룬 특수 파일의 기본 계층은 다음과 같다.
 
 ```text
-src/app/(marketing)/about/page.tsx → /about
+layout
+└─ template
+   └─ error 경계
+      └─ loading 경계
+         └─ not-found 경계
+            └─ page 또는 하위 layout
 ```
 
-그룹마다 레이아웃을 둘 수 있다. 다만 `app/blog/page.tsx`와 `app/(marketing)/blog/page.tsx`를 동시에 만들면 같은 `/blog`에 대응하므로 충돌한다.
+각 경계는 해당 상태일 때 대체 UI를 표시한다. 중첩 라우트에도 같은 구조가 반복되므로 부모의 공통 UI 안에서 하위 페이지의 로딩과 오류를 나누어 처리할 수 있다.
 
-### 4. 루트 레이아웃과 중첩 레이아웃
+#### 3.3 Layout vs Template
 
-루트 레이아웃에는 `html`과 `body`가 필요하다. `children`에는 하위 페이지 또는 하위 레이아웃이 들어간다.
+| 구분 | layout | template |
+| --- | --- | --- |
+| 공유 구간 이동 | 기존 인스턴스 유지 | 템플릿 키가 바뀌면 새 인스턴스 생성 |
+| 클라이언트 상태 | 유지 가능 | 재마운트되는 부분은 초기화 |
+| 사용 예 | 헤더, 메뉴, 사이드바 | 진입마다 초기화가 필요한 UI |
+
+정적·동적 페이지 여부보다 인스턴스와 상태를 유지할지에 따라 구분한다.
+
+#### 3.4 src Directory
+
+`src`는 애플리케이션 소스를 설정 파일과 분리하기 위한 선택적 폴더다. `app`을 루트에 둘 수도 있고 `src/app`으로 구성할 수도 있다.
+
+---
+
+### 4. Creating Pages and Nested Layouts
+
+`page.tsx`는 해당 경로의 화면, `layout.tsx`는 하위 화면의 공통 틀이다. layout의 `children` 자리에 페이지 또는 더 안쪽 레이아웃이 들어간다.
+
+```text
+src/app/
+├─ layout.tsx
+├─ page.tsx
+└─ (marketing)/
+   ├─ layout.tsx
+   └─ about/
+      ├─ layout.tsx
+      └─ page.tsx
+```
+
+`/about`의 화면은 Root Layout → Marketing Layout → About Layout → About Page 순서로 감싸진다. 루트만 `html`, `body`를 포함하고 하위 레이아웃은 필요한 공통 UI를 작성한다.
 
 ```tsx
+export default function MarketingLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div>
+      <header>Marketing Layout Header</header>
+      {children}
+      <footer>Marketing Layout Footer</footer>
+    </div>
+  );
+}
+```
+
+---
+
+### 5. Loading Skeleton 실습
+
+특정 경로에 `loading.tsx`를 만들고 페이지에 3초 지연을 넣어 로딩 UI를 관찰하는 예제다.
+
+```tsx
+// loading.tsx
+export default function Loading() {
+  return <div>Loading...</div>;
+}
+```
+
+```tsx
+// page.tsx
+export default async function BlogPage() {
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  return <div>Blog 페이지</div>;
+}
+```
+
+`await`는 Promise가 완료된 결과를 기다린다. 위 코드는 지연을 관찰하기 위한 수업 예제이며, 사전 렌더링·캐시 여부에 따라 매 방문마다 지연이 생기는 것은 아니다.
+
+---
+
+## 2026-09-09 (Week 2)
+
+### 1. Manual Installation
+
+프로젝트에 필요한 패키지와 파일을 직접 만들면서 기본 구성을 확인한다.
+
+```bash
+mkdir foo
+cd foo
+pnpm init
+pnpm add next react react-dom
+pnpm add -D typescript @types/node @types/react @types/react-dom
+```
+
+| 설치 방법 | 등록 위치 | 용도 |
+| --- | --- | --- |
+| `pnpm add` | dependencies | 앱 실행에 필요한 패키지 |
+| `pnpm add -D` | devDependencies | 타입 검사, 빌드, 린트 등 개발 도구 |
+
+#### 1.1 루트 레이아웃과 페이지
+
+```tsx
+// app/layout.tsx
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body>
-        <header>공통 메뉴</header>
-        <main>{children}</main>
-        <footer>공통 하단 영역</footer>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
 ```
 
-현재 `/about`의 적용 순서는 다음과 같다.
-
-```text
-app/layout.tsx                         Root Layout
-└─ (marketing)/layout.tsx              Marketing Layout
-   └─ about/layout.tsx                About Layout
-      └─ about/page.tsx               페이지 본문
+```tsx
+// app/page.tsx
+export default function Page() {
+  return <h1>Hello, Next.js!</h1>;
+}
 ```
 
-하위 레이아웃은 필요한 영역과 `children`을 반환한다. `html`과 `body`를 다시 넣지 않는다.
+`/`에 접속하면 루트 레이아웃 안에 page의 내용이 들어간다. 두 파일을 `src/app`에 구성할 수도 있다.
 
-### 5. layout과 template의 차이
+#### 1.2 scripts와 개발 서버
 
-| 구분 | layout | template |
-| --- | --- | --- |
-| 역할 | 여러 페이지의 공통 UI 유지 | 하위 화면을 새로운 인스턴스로 감싸기 |
-| 이동 시 동작 | 공유 구간을 유지 | 해당 템플릿의 키가 바뀌면 재마운트 |
-| 클라이언트 상태 | 공유 부분의 상태 유지 가능 | 재마운트되는 부분의 상태 초기화 |
-| 사용 예 | 메뉴, 사이드바 | 진입마다 초기화할 폼 등 |
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  }
+}
+```
 
-정적 페이지에는 layout, 동적 페이지에는 template을 쓰는 식으로 구분하지 않는다. 화면 이동 시 무엇을 유지하고 초기화할지가 기준이다.
+```bash
+pnpm dev
+```
 
-### 6. 병렬 라우트·가로채기 라우트와 src 폴더
+`dev` 명령을 찾을 수 없다는 오류가 나면 package.json의 scripts를 확인한다. JSX 타입 오류가 나면 React 타입 패키지와 TypeScript 구성을 확인한다. Next.js는 TypeScript 파일을 감지해 필요한 설정을 안내하거나 생성한다.
 
-- `@slot`: 여러 화면 영역을 독립적인 슬롯으로 구성하는 병렬 라우트 표기다.
-- `(.)`, `(..)` 등: 다른 경로의 화면을 현재 맥락에서 표시하는 가로채기 라우트 표기다.
-- `src/`: 애플리케이션 코드를 설정 파일과 구분하기 위한 폴더다. 이 앱은 `src/app`을 사용한다.
-- `@/*`: 현재 `tsconfig.json`에서 `src/*`로 연결한 import 별칭이다.
-
-병렬·가로채기 라우트는 수업 개념으로 기록하며, 현재 실습 앱에는 별도로 구현하지 않았다.
-
-**실습 확인**: `/about`에서 Root → Marketing → About 레이아웃을 확인한다. 주소에 `(marketing)`이 나타나지 않는지도 확인한다.
-
-참고: [프로젝트 구조](https://nextjs.org/docs/app/getting-started/project-structure), [레이아웃](https://nextjs.org/docs/app/api-reference/file-conventions/layout)
+자료의 예전 `next lint` 명령은 버전 차이에 주의한다. Next.js 16에서는 별도로 설정한 ESLint 명령을 사용한다.
 
 ---
 
-## 2026-09-09 (2주차)
+### 2. create-next-app
 
-### 1. 프로젝트 생성과 실행
-
-`create-next-app`을 사용하면 프로젝트 생성과 기본 설정을 함께 진행할 수 있다.
-
-```powershell
-# 새 프로젝트를 만들 때 사용하는 명령 예시
-npx create-next-app@latest my-next-app
+```bash
+pnpm create next-app@latest my-app
 ```
 
-현재 프로젝트는 이미 만들어져 있으므로 복습할 때는 다시 생성하지 않고 해당 폴더에서 실행한다.
+TypeScript, ESLint, Tailwind CSS, src 폴더, App Router, import 별칭 등을 선택해 기본 프로젝트를 생성한다.
 
-```powershell
-cd my-next-app
-npm.cmd ci
-npm.cmd run dev
+```bash
+pnpm create next-app@latest my-app --yes
 ```
 
-수동 구성에서는 `next`, `react`, `react-dom`을 설치하고 package.json에 개발·빌드·실행 명령을 등록한다. 현재 앱의 주요 명령은 다음과 같다.
+`--yes`를 사용하면 기본값이나 저장된 설정을 이용해 질문을 건너뛴다.
 
-| 명령 | 목적 |
+---
+
+### 3. Folder and File Conventions
+
+#### 3.1 Top-level Folders
+
+| 폴더 | 역할 |
 | --- | --- |
-| `npm.cmd run dev` | 개발 서버 실행 |
-| `npm.cmd run build` | 프로덕션 빌드 |
-| `npm.cmd run start` | 빌드 결과 실행 |
-| `npm.cmd run lint` | ESLint 코드 검사 |
+| `app` | App Router |
+| `pages` | Pages Router |
+| `public` | 이미지·폰트 등 정적 리소스 |
+| `src` | 애플리케이션 소스를 구분하는 선택적 폴더 |
 
-### 2. 최상위 폴더와 설정 파일
+`public/profile.png`는 `/profile.png`로 접근한다. `next/image`를 사용하면 이미지 크기 정보와 대체 텍스트를 함께 작성할 수 있다.
 
-| 이름 | 역할 |
-| --- | --- |
-| `src/app` | App Router의 페이지와 레이아웃 |
-| `public` | 정적 파일 |
-| `package.json` | 의존성과 실행 명령 |
-| `package-lock.json` | npm 설치 버전 고정 |
-| `next.config.ts` | Next.js 설정 |
-| `tsconfig.json` | TypeScript 및 import 경로 설정 |
-| `eslint.config.mjs` | 코드 검사 규칙 |
-| `postcss.config.mjs` | CSS 처리 설정 |
-| `.gitignore` | Git 추적에서 제외할 파일 |
-
-현재 프로젝트는 ESLint flat config 형식인 `eslint.config.mjs`를 사용한다. 예전 자료의 `.eslintrc.json`을 같은 설정 파일로 생각하고 그대로 덮어쓰지 않는다.
-
-### 3. 예약된 파일 이름
+#### 3.2 Top-level Files
 
 | 파일 | 역할 |
 | --- | --- |
-| `page.tsx` | 해당 주소에 표시할 화면 |
-| `layout.tsx` | 하위 화면을 감싸는 공통 영역 |
-| `loading.tsx` | 준비 중인 화면 |
-| `not-found.tsx` | 없는 경로나 데이터 안내 |
-| `error.tsx` | 해당 구간과 하위의 런타임 오류 처리 |
-| `global-error.tsx` | 루트 수준 오류 처리 |
-| `template.tsx` | 이동 시 재마운트가 필요한 공통 틀 |
-| `route.ts` | GET·POST 등의 HTTP 요청 처리 |
-| `default.tsx` | 병렬 라우트 슬롯의 기본 화면 |
+| `next.config.js` / `next.config.ts` | Next.js 설정 |
+| `package.json` | 의존성과 실행 명령 |
+| `instrumentation.ts` | 계측·모니터링 연동 |
+| `proxy.ts` | 요청 프록시 처리 |
+| `.env`, `.env.local` 등 | 환경 변수 |
+| `.gitignore` | Git 제외 목록 |
+| `next-env.d.ts` | 자동 생성되는 Next.js 타입 선언 |
+| `tsconfig.json` / `jsconfig.json` | 타입 및 모듈 경로 설정 |
+| `eslint.config.mjs` | ESLint flat config |
 
-`error.tsx`는 Client Component로 작성한다. 같은 구간의 layout에서 발생한 오류는 상위 오류 경계에서 처리한다. `global-error.tsx`는 루트 레이아웃을 대신하므로 자체 `html`, `body`를 포함해야 한다.
+이 파일이 프로젝트 생성 시 모두 만들어지는 것은 아니다.
 
-### 4. 동적 경로의 폴더 표기
+#### 3.3 Routing Files
 
-| 표기 | 받는 주소 구간 | params 값 예시 |
-| --- | --- | --- |
-| `[slug]` | 한 구간 | `"nextjs"` |
-| `[...slug]` | 하나 이상의 구간 | `["guide", "install"]` |
-| `[[...slug]]` | 구간이 없는 경우까지 허용 | `undefined` 또는 문자열 배열 |
+| 파일 | 역할 |
+| --- | --- |
+| `page` | 해당 경로의 UI |
+| `layout` | 공유 레이아웃 |
+| `loading` | 로딩 UI |
+| `not-found` | 찾을 수 없음 UI |
+| `error` | 구간의 오류 경계 |
+| `global-error` | 루트 수준 오류 UI |
+| `route` | HTTP 요청 처리 |
+| `template` | 새 인스턴스로 감싸는 UI |
+| `default` | 병렬 라우트 슬롯의 기본 UI |
 
-예를 들어 `app/docs/[...slug]/page.tsx`는 `/docs/guide/install`을 처리할 수 있다. `/docs` 자체까지 처리하려면 선택적 catch-all인 `[[...slug]]`를 검토한다.
-
-### 5. 설치 파일과 Git 관리
-
-`node_modules`는 설치된 의존성, `.next`는 Next.js가 생성한 결과다. 원격 저장소에는 소스와 잠금 파일을 올리고, 이 폴더들은 `.gitignore`로 제외한다.
-
-현재 앱은 npm과 `package-lock.json`을 사용한다. 참고 저장소에서 pnpm을 사용하더라도 잠금 파일을 한 프로젝트에 섞지 않는다.
-
-**실습 확인**: `src/app/page.tsx`가 `/`에 대응하는지 확인하고, `package.json`의 scripts와 실제 실행 명령을 비교한다.
-
-참고: [프로젝트 구조와 파일 규칙](https://nextjs.org/docs/app/getting-started/project-structure)
+UI 파일에는 `.js`, `.jsx`, `.tsx`, 요청 처리 파일에는 `.js`, `.ts` 등을 사용한다. 폴더의 중첩이 URL 구간의 중첩으로 이어진다.
 
 ---
 
-## 2026-09-02 (1주차)
+### 4. Dynamic Routes
 
-### 1. Next.js란?
-
-React로 UI를 만들면서 라우팅, 서버 렌더링, 빌드 등 애플리케이션에 필요한 기능을 함께 사용할 수 있는 프레임워크다.
-
-React가 화면을 컴포넌트로 구성하는 기반이라면, Next.js는 그 화면을 어떤 URL에서 어떤 방식으로 제공할지도 구성한다.
-
-### 2. App Router와 Pages Router
-
-| 구분 | App Router | Pages Router |
+| 폴더 표기 | 처리 범위 | 예시 값 |
 | --- | --- | --- |
-| 기준 폴더 | `app` 또는 `src/app` | `pages` 또는 `src/pages` |
-| `/about`의 파일 | `app/about/page.tsx` | `pages/about.tsx` |
-| 공통 화면 | 중첩 `layout.tsx` | `_app` 및 별도 레이아웃 구성 |
-| 주요 학습 내용 | 서버 컴포넌트, 로딩 UI, 중첩 라우트 | `getStaticProps` 등 기존 데이터 처리 방식 |
+| `[slug]` | 한 구간 | `"abc"` |
+| `[...slug]` | 하나 이상의 구간 | `["abc", "def"]` |
+| `[[...slug]]` | 구간이 없는 경우도 포함 | `undefined` 또는 배열 |
 
-이 수업 프로젝트는 App Router를 사용한다. 공식 문서를 볼 때도 App Router용 예제인지 확인한다. Pages Router를 지원하지 않는다고 생각하거나 두 방식의 파일 규칙을 섞지 않는다.
+`/posts/[slug]`는 `/posts/abc`를 처리하지만 `/posts`나 `/posts/abc/def`까지 처리하지 않는다. 허용할 경로 깊이와 기본 경로 포함 여부에 따라 표기를 선택한다.
 
-### 3. 공식 문서를 읽기 위한 기초
+---
 
-- HTML: 화면 구조와 의미 있는 태그.
-- CSS: 배치, 간격, 색상, 반응형 스타일.
-- JavaScript: 배열, 객체, 함수, 모듈, Promise, async/await.
-- React: 컴포넌트, props, state, Hook.
-- TypeScript: 값과 props의 타입 표현.
+### 5. 개발 환경 설정
 
-공식 문서의 Getting Started에서 프로젝트 생성 → 구조 → 레이아웃과 페이지 → 링크와 내비게이션 순서로 학습한다.
+#### 5.1 ESLint 설정 파일
 
-### 4. 접근성
+`.eslintrc.json`은 JSON 설정, `eslint.config.mjs`는 JavaScript 모듈 형태의 flat config다. mjs에서는 import, 변수, 조건문 등을 이용한 설정 구성이 가능하다.
 
-접근성은 키보드 사용자나 보조 기술 사용자도 화면을 이용할 수 있게 만드는 일이다.
+#### 5.2 Path Aliases
 
-- 제목은 내용 계층에 맞춰 `h1`, `h2` 등으로 작성한다.
-- 이동에는 링크, 동작에는 버튼을 사용한다.
-- 이미지에는 용도에 맞는 대체 텍스트를 제공한다.
-- 키보드 포커스가 보이도록 하고 메뉴 이름을 구분한다.
-- 한국어 문서는 `html`의 `lang`을 `ko`로 지정한다.
+깊은 상대 경로 대신 `@/` 같은 별칭을 사용한다.
 
-현재 앱에는 본문 바로가기 링크와 메뉴의 접근성 이름을 적용했다.
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"]
+    }
+  }
+}
+```
 
-### 5. npm과 pnpm
+자료의 `baseUrl`과 버전별 경고 설정을 그대로 섞기보다 실제 TypeScript 버전을 확인한다. 위처럼 경로를 직접 지정할 수 있다.
 
-npm과 pnpm은 프로젝트에서 사용할 패키지를 설치하고 관리하는 도구다. pnpm은 패키지 저장소와 링크를 활용해 디스크 사용과 의존성 관리를 효율적으로 처리한다. 실제 저장·연결 방식은 버전과 설정에 따라 달라질 수 있다.
+#### 5.3 VS Code 편집기 레이블
 
-| 개념 | 의미 |
+여러 `page.tsx`가 열려 있을 때 폴더명도 표시하면 구분하기 쉽다.
+
+```json
+{
+  "workbench.editor.customLabels.patterns": {
+    "**/app/**/page.tsx": "${dirname(1)}/${dirname} - page.tsx",
+    "**/app/**/layout.tsx": "${dirname(1)}/${dirname} - layout.tsx"
+  }
+}
+```
+
+---
+
+### 6. pnpm과 링크 구조 복습
+
+pnpm은 공용 패키지 저장소의 파일을 재사용해 중복 저장을 줄인다. pnpm 설치 상태는 `pnpm-lock.yaml`에 기록한다.
+
+하드 링크는 같은 데이터를 가리키는 이름을 추가하는 방식이고, 심볼릭 링크는 대상 경로를 가리킨다. 같은 프로젝트에서 패키지 관리자를 바꿀 때는 잠금 파일과 설치 상태를 함께 확인한다.
+
+---
+
+## 2026-09-02 (Week 1)
+
+### 1. Next.js
+
+Next.js는 React를 기반으로 웹 애플리케이션을 구성하는 프레임워크다. UI뿐 아니라 라우팅, 서버 렌더링, 번들러·컴파일러 설정 등의 기능을 함께 제공한다. React 위에서 앱 구성 기능을 제공한다는 의미에서 메타 프레임워크라고도 설명한다.
+
+### 2. Getting Started
+
+| 공식 문서 영역 | 읽는 목적 |
 | --- | --- |
-| 하드 링크 | 같은 파일 데이터를 가리키는 다른 파일 이름 |
-| 심볼릭 링크 | 다른 파일이나 폴더의 경로를 가리키는 링크 |
-| 잠금 파일 | 의존성 버전을 기록해 설치 결과를 맞추는 파일 |
+| Getting Started | 설치와 핵심 기능을 순서대로 학습 |
+| Guides | 특정 사용 사례와 구현 방법 확인 |
+| API Reference | 개별 기능의 인자·옵션·동작 확인 |
 
-수업 자료의 pnpm 명령을 읽을 수는 있어도, 현재 프로젝트 실행은 npm으로 통일한다. 설치와 실행 안내는 [README.md](README.md)에 정리했다.
+HTML, CSS, JavaScript와 React의 컴포넌트·props·state를 먼저 이해하면 예제를 따라가기 쉽다. 기초를 익힌 뒤에는 공식 Learn 과정으로 실습할 수 있다.
 
-**실습 확인**: 프로젝트가 App Router 구조인지 확인하고, 개발 서버를 실행해 첫 페이지를 연다.
+### 3. App Router / Pages Router
 
-참고: [Next.js App Router 시작하기](https://nextjs.org/docs/app/getting-started)
+- **App Router**: app 디렉터리와 서버 컴포넌트, 중첩 레이아웃 등의 기능을 사용한다.
+- **Pages Router**: pages 디렉터리를 사용하는 기존 라우터이며 계속 지원된다.
+- 문서에서 라우터와 버전을 선택해 사용하는 프로젝트에 맞는 예제를 읽는다.
+- `page`는 경로의 화면, `layout`은 공유 구조를 담당한다.
+
+### 4. Server / Client Components
+
+서버 컴포넌트는 서버에서 처리하고, 상태·이벤트·브라우저 기능이 필요한 부분에는 클라이언트 컴포넌트를 사용한다. `'use client'`는 클라이언트 컴포넌트의 진입 경계를 선언한다.
+
+```tsx
+"use client";
+
+import { useState } from "react";
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>클릭: {count}</button>;
+}
+```
+
+React 자체에도 서버 렌더링 기능이 있으므로 React는 항상 CSR만 가능하다고 구분하지 않는다.
+
+### 5. Accessibility
+
+접근성은 다양한 사용자가 콘텐츠와 기능을 이용할 수 있게 만드는 것이다. 수업 자료에서는 화면 판독기 사용 조합으로 Firefox·NVDA, Safari·VoiceOver를 소개한다.
+
+화면을 시각적으로 보는 상황만 가정하지 않고 문서 구조, 이미지 대체 텍스트, 키보드 조작도 고려한다.
+
+### 6. pnpm
+
+Performant NPM이라는 이름의 패키지 관리자로, 저장 공간과 설치 속도·의존성 관리를 개선하는 데 초점을 둔다.
+
+- 이미 받은 패키지 파일 재사용
+- 중복 저장을 줄여 디스크 공간 절약
+- 의존성 관계를 엄격하게 관리
+- 프로젝트별 잠금 파일로 설치 상태 기록
+
+#### 6.1 Hard Link
+
+Unix 계열 파일 시스템을 설명할 때 파일을 다음 요소로 나눌 수 있다.
+
+- **Directory Entry**: 파일 이름과 inode를 연결한다.
+- **inode**: 권한, 소유자, 크기, 데이터 위치 등의 정보를 가진다.
+- **Data Blocks**: 실제 데이터를 저장한다.
+
+하드 링크는 같은 inode에 대한 다른 이름이다. 한 이름을 지워도 다른 링크가 남아 있으면 데이터를 사용할 수 있다.
+
+#### 6.2 Symbolic Link
+
+심볼릭 링크는 별도의 링크 파일에 대상 경로를 기록한다. 대상이 이동하거나 삭제되면 연결이 끊어질 수 있다. 하드 링크처럼 같은 inode를 공유하는 방식과 구분한다.
+
+### 7. 내장 최적화와 배포
+
+- `next/image`: 크기·형식 등 이미지 제공을 최적화한다.
+- `next/font`: 폰트 로딩과 자체 호스팅을 지원하고 레이아웃 이동을 줄이는 데 도움을 준다.
+- `build`, `start` 등의 실행 명령으로 배포용 결과를 만들고 실행한다.
+- Vercel 등의 호스팅 서비스를 사용할 수 있으며 플랫폼별 지원 기능을 확인한다.
+
+### 8. Installation
+
+```bash
+pnpm create next-app@latest my-app
+```
+
+`--yes`를 붙이면 기본값이나 저장된 설정으로 질문을 건너뛴다. 지원 브라우저와 필요한 폴리필도 설치 문서에서 확인한다.
+
+---
+
+참고한 저장소: [wpexq](https://github.com/wpexq/React2), [wlswodnjs](https://github.com/wlswodnjs/react-02), [jinwooorp](https://github.com/jinwooorp/React2), [gkfg](https://github.com/gkfg/Daelim-React2), [onejae17](https://github.com/onejae17/React2), [imdohyeon](https://github.com/imdohyeon/React2), [umteahoon](https://github.com/umteahoon/React2)
+
+[날짜별 원본 대조 기록](docs/SOURCES.md) · [프로젝트 실행 방법](my-next-app/README.md)
