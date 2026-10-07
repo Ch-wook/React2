@@ -1,6 +1,6 @@
 # Next.js 수업 실습
 
-[날짜별 수업 정리](../RENAME.md) · [자료 출처](../docs/SOURCES.md) · [저장소 안내](../README.md)
+[날짜별 수업 정리](../RENAMED.md) · [자료 출처](../docs/SOURCES.md) · [저장소 안내](../README.md)
 
 ## 실행
 
