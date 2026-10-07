@@ -1,0 +1,11 @@
+# Local dependencies and build output
+**/node_modules/
+**/.next/
+**/out/
+**/coverage/
+*.tsbuildinfo
+*.log
+.env*
+!.env.example
+.DS_Store
+Thumbs.db
