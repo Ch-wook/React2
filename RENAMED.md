@@ -1,6 +1,262 @@
-# Ch-wook · React2
+# 202130433 최현욱 수업기록
 
 ---
+
+## 2026-10-07 (Week 6)
+
+### 1. generateStaticParams 실습
+
+동적 세그먼트의 값을 빌드 시점에 알고 있다면 `generateStaticParams`로 미리 만들 경로를 전달한다.
+
+```tsx
+// app/blog3/[slug]/page.tsx
+import { notFound } from "next/navigation";
+import { posts } from "../posts";
+
+export async function generateStaticParams() {
+  return posts.map((post) => ({ slug: post.slug }));
+}
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const post = posts.find((post) => post.slug === slug);
+  if (!post) notFound();
+
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+```
+
+#### 1.1 빌드 시점의 동작 순서
+
+1. Next.js가 동적 경로의 `generateStaticParams()`를 실행한다.
+2. 함수가 `{ slug: "nextjs" }` 같은 params 객체의 배열을 반환한다.
+3. 빌드 과정에서 각 params에 해당하는 페이지를 렌더링한다.
+4. 사전 렌더링 가능한 결과를 생성해 요청 시 제공한다.
+
+`map()`이 HTML을 직접 만드는 것은 아니다. `map()`은 필요한 경로 목록을 만들고, 실제 페이지 생성은 Next.js의 빌드 과정이 담당한다.
+
+| 반환한 값 | 대응하는 경로 |
+| --- | --- |
+| `{ slug: "nextjs" }` | `/blog3/nextjs` |
+| `{ slug: "routing" }` | `/blog3/routing` |
+| `{ slug: "ssr-ssg" }` | `/blog3/ssr-ssg` |
+
+결과물의 실제 파일 위치와 형식은 빌드·배포 설정에 따라 달라지므로 항상 `/경로/index.html`이 생성된다고 보지는 않는다.
+
+#### 1.2 generateStaticParams가 없는 경우와 있는 경우
+
+| 비교 | 없는 경우 | 있는 경우 |
+| --- | --- | --- |
+| 경로 목록 | 빌드에 사전 생성 목록을 제공하지 않음 | 반환한 params 목록을 빌드에 제공 |
+| 수업 예제의 렌더링 | `/blog2/[slug]`는 요청 시 처리 | `/blog3/[slug]`의 알려진 글은 빌드 시 생성 |
+| 첫 요청 | 서버에서 해당 글의 화면을 준비 | 미리 준비된 결과를 제공 가능 |
+| 추가 slug | 요청 때 데이터 존재 여부 확인 | `dynamicParams` 등 설정에 따라 추가 경로 처리 |
+
+두 방식 모두 서버에서 HTML을 제공할 수 있다. 정적 생성만 SEO가 가능한 것은 아니며, 실제 속도와 캐시 동작은 데이터 요청·설정에 따라 달라진다. 함수를 추가하더라도 요청 전용 API를 사용하는 부분까지 자동으로 정적 결과가 되지는 않는다.
+
+---
+
+### 2. await이 없어도 async를 붙여 두는 이유
+
+Server Component는 비동기 함수로 작성할 수 있다. 현재는 더미 배열에서 값을 찾더라도 나중에 API나 DB 조회가 추가될 수 있어 수업 예제에서는 `async` 형태를 사용한다.
+
+- **일관성**: 데이터 조회 페이지의 함수 형태를 맞춘다.
+- **확장성**: `await fetch(...)`나 비동기 DB 호출을 추가하기 쉽다.
+- **Promise 지원**: Server Component는 Promise를 반환하는 비동기 렌더링을 지원한다.
+
+```tsx
+export default async function Page() {
+  return <h1>Blog</h1>;
+}
+```
+
+`async`는 모든 서버 컴포넌트에 필수인 규칙은 아니다. 비동기 처리가 없다면 일반 함수도 사용할 수 있다. Client Component 자체는 async 함수로 만들지 않는다.
+
+---
+
+### 3. Navigation이 느려지는 경우 — 이어서
+
+#### 2.3 느린 네트워크
+
+정적·동적 경로 모두 네트워크가 느리면 클릭 전에 프리페칭이 끝나지 않을 수 있다. `loading.tsx`도 아직 도착하지 않았다면 즉시 표시하기 어렵다.
+
+이때 `useLinkStatus`로 클릭한 링크의 이동 상태를 보여줄 수 있다.
+
+```tsx
+// app/ui/loading-indicator.tsx
+"use client";
+
+import { useLinkStatus } from "next/link";
+
+export default function LoadingIndicator() {
+  const { pending } = useLinkStatus();
+  return (
+    <span aria-hidden="true" className={`link-hint ${pending ? "is-pending" : ""}`} />
+  );
+}
+```
+
+```tsx
+import Link from "next/link";
+import LoadingIndicator from "./ui/loading-indicator";
+
+export default function Menu() {
+  return (
+    <Link href="/blog2/nextjs" prefetch={false}>
+      Next.js 소개 <LoadingIndicator />
+    </Link>
+  );
+}
+```
+
+`useLinkStatus`는 반드시 `Link`의 하위 컴포넌트에서 사용한다. 이미 프리페칭된 경로는 pending 단계가 짧거나 생략될 수 있다.
+
+##### 로딩 표시의 깜빡임 줄이기
+
+100ms 정도의 표시 지연을 주면 빠르게 끝나는 이동에서 스피너가 잠깐 나타났다 사라지는 현상을 줄일 수 있다. 표시 영역을 미리 확보하면 텍스트 위치도 흔들리지 않는다.
+
+```css
+.link-hint {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-left: 0.5rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.link-hint.is-pending {
+  animation: fade-in 150ms 100ms forwards, rotate 800ms linear infinite;
+}
+
+@keyframes fade-in { to { opacity: 1; } }
+@keyframes rotate { to { transform: rotate(360deg); } }
+```
+
+---
+
+#### 2.4 프리페칭 비활성화
+
+링크가 많은 테이블이나 목록에서는 사용하지 않을 경로까지 미리 가져오는 비용이 생길 수 있다. `prefetch={false}`를 지정하면 해당 링크의 자동 프리페칭을 끈다.
+
+```tsx
+<Link href="/blog" prefetch={false}>Blog</Link>
+```
+
+- 정적 경로도 클릭 후 가져와야 하므로 대기가 생길 수 있다.
+- 동적 경로는 서버의 렌더링 결과를 기다릴 수 있다.
+- 로딩 UI나 링크 상태 표시로 진행 중임을 알려줄 수 있다.
+
+##### Hover Prefetching
+
+마우스를 올린 링크만 프리페칭하도록 하면 방문 가능성이 높은 경로에 요청을 집중할 수 있다.
+
+```tsx
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+export default function HoverPrefetchLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  const [active, setActive] = useState(false);
+  return (
+    <Link href={href} prefetch={active ? null : false}
+      onMouseEnter={() => setActive(true)}
+      onFocus={() => setActive(true)}>
+      {children}
+    </Link>
+  );
+}
+```
+
+`null`은 기본 프리페칭 동작으로 되돌린다. 키보드로 접근할 때도 적용되도록 포커스 이벤트를 함께 처리할 수 있다.
+
+##### Manual Prefetching
+
+`useRouter()`의 `router.prefetch(href)`로 직접 프리페칭할 수도 있다. 일부 수업 자료의 `useEffect` 예제는 마운트 때 프리페칭하고 `onInvalidate`로 다시 요청하는 형태다. 호버했을 때만 실행하는 예제와 구분한다. 이동 자체는 `Link`를 사용하면 새 탭 열기와 키보드 조작 등 기본 링크 동작을 유지하기 쉽다.
+
+---
+
+#### 2.5 Hydration이 완료되지 않은 경우
+
+Hydration은 서버가 생성한 HTML에 클라이언트 JavaScript를 연결해 상호작용을 가능하게 하는 과정이다. `Link`의 클라이언트 기능도 hydration 이후 동작하므로 초기 JS가 크면 프리페칭 시작이 늦어질 수 있다.
+
+- React의 선택적 hydration으로 필요한 부분을 우선 처리한다.
+- 큰 의존성이 어디에 포함되는지 번들을 분석한다.
+- 브라우저에서 실행할 필요가 없는 로직은 Server Component로 옮긴다.
+- 상호작용이 필요한 부분만 작은 Client Component로 나눈다.
+
+##### @next/bundle-analyzer
+
+수업에서는 번들에 포함된 모듈과 크기를 확인하기 위해 `@next/bundle-analyzer`를 사용한다.
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const nextConfig: NextConfig = {};
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false,
+});
+
+export default withBundleAnalyzer(nextConfig);
+```
+
+이 플러그인은 Webpack용이다. Next.js 16에서 분석할 때는 Webpack 빌드를 명시한다.
+
+```powershell
+$env:ANALYZE = "true"
+try { npm.cmd run build -- --webpack }
+finally { Remove-Item Env:ANALYZE }
+```
+
+분석기가 의존성을 자동으로 제거하지는 않는다. 결과를 보고 불필요한 의존성을 제거하거나 로딩 방식을 바꾸는 작업은 직접 해야 한다.
+
+---
+
+### 4. Server Component & Client Component
+
+서버와 브라우저는 사용할 수 있는 기능이 다르다. 필요한 작업이 어느 환경에 속하는지에 따라 컴포넌트를 나눈다.
+
+#### 4.1 Client Component를 사용하는 경우
+
+- state와 `onClick`, `onChange` 같은 이벤트 처리
+- `useEffect` 등 클라이언트 생명주기 로직
+- `window`, `localStorage`, `navigator.geolocation` 등 브라우저 API
+- 위 기능에 의존하는 사용자 정의 Hook
+
+파일 상단에 `'use client'`를 선언한다. 브라우저 API는 적절한 이벤트나 effect 안에서 접근한다. Client Component도 초기 HTML 생성에 참여할 수 있으므로 서버 렌더링 중 무조건 `window`를 사용할 수 있는 것은 아니다.
+
+#### 4.2 Server Component를 사용하는 경우
+
+- 서버에서 DB나 API 데이터를 조회할 때
+- API key, token 등을 브라우저에 전달하지 않고 사용할 때
+- 클라이언트로 보내는 JavaScript 양을 줄일 때
+- 초기 콘텐츠를 준비하고 점진적으로 스트리밍할 때
+
+`page`와 `layout`은 기본적으로 Server Component다. 서버에서 준비한 데이터 중 화면에 필요한 값만 클라이언트 컴포넌트에 전달한다. 서버에서 사용한 비밀 값을 props나 HTML에 넣으면 노출되므로 포함하지 않는다.
+
+---
+
 
 ## 2026-09-30 (Week 5)
 

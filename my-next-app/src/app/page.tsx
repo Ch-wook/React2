@@ -5,6 +5,8 @@ const exercises = [
   { href: "/blog", title: "02. URL에서 글 찾기", description: "[slug]와 params로 글을 찾고 정적 경로를 생성합니다." },
   { href: "/products?id=1&name=keyboard", title: "03. 주소에 조건 담기", description: "searchParams로 id와 name을 읽어 화면에 표시합니다." },
   { href: "/streaming", title: "04. 기다리는 동안 보여주기", description: "2초짜리 실습 지연으로 loading.tsx와 페이지 전환을 관찰합니다." },
+  { href: "/blog2", title: "05. 요청 시점에 글 찾기", description: "동적 경로와 useLinkStatus의 이동 상태를 확인합니다." },
+  { href: "/blog3", title: "06. 미리 만들어 둔 글 보기", description: "정적 경로 생성과 호버 프리페칭을 비교합니다." },
 ];
 
 export default function Home() {

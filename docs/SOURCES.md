@@ -1,20 +1,75 @@
 # 수업 자료 비교 및 반영 기록
 
-확인일: **2026-10-07 (Asia/Seoul)**. 사용자가 제공한 7개 저장소의 기본 브랜치를 가져와 커밋과 파일을 비교했다. 한 링크에 붙어 있던 `gkfg/Daelim-React2`와 `onejae17/React2`는 별도 저장소로 분리했다.
+확인일: **2026-10-13 (Asia/Seoul)**. 7개 저장소의 원격 기본 브랜치를 fetch해 이전 반영 커밋과 비교했다. GitHub 웹 검색 결과에는 이전 내용이 남아 있어, 최신 여부는 실제 원격 Git 커밋과 파일을 기준으로 확인했다.
 
 ## 저장소별 최신 상태
 
-모든 자료의 가장 최근 수업 범위는 **2026-09-30, 5주차**다. 아래 시각은 한국 시간이며 커밋 날짜와 실제 수업 날짜는 구분한다.
+새 수업 범위는 **2026-10-07 (Week 6)**다. 가장 늦게 갱신된 문서는 wpexq의 10월 11일 커밋이지만 수업 날짜는 10월 7일이다. 10월 14일 수업은 아직 확인된 자료가 없다.
 
-| 저장소 | 최신 커밋 | 커밋 시각 (KST) | 확인 및 활용 |
+| 저장소 | 확인한 커밋 | 커밋 시각 (KST) | 이전 반영 이후 변경 |
 | --- | --- | --- | --- |
-| [wpexq/React2](https://github.com/wpexq/React2) | [41f59a9](https://github.com/wpexq/React2/commit/41f59a99f506d4eb84a914e896d2fb4dc0884947) | 10/04 18:42:15 | 5주차 내비게이션·프리페칭 정리 비교 |
-| [wlswodnjs/react-02](https://github.com/wlswodnjs/react-02) | [4dce7bb](https://github.com/wlswodnjs/react-02/commit/4dce7bb2c20c25e12be81e846bd19d752bfbdca5) | 09/30 12:49:59 | 라우팅 구조와 스트리밍 설명 비교 |
-| [jinwooorp/React2](https://github.com/jinwooorp/React2) | [16852c9](https://github.com/jinwooorp/React2/commit/16852c943cce74b11fd6281827106fcf2844e267) | 09/30 12:53:00 | 블로그·상품 예제 및 레이아웃 설명 비교 |
-| [gkfg/Daelim-React2](https://github.com/gkfg/Daelim-React2) | [852b410](https://github.com/gkfg/Daelim-React2/commit/852b4109851b5b4348e00c230acff3e32cc1f69b) | 09/30 12:42:23 | 지연·loading 예제를 스트리밍 실습에 반영 |
-| [onejae17/React2](https://github.com/onejae17/React2) | [178ba76](https://github.com/onejae17/React2/commit/178ba768a09151cb9f240e8c7434d69b680664b6) | 09/30 12:49:15 | README만 있는 저장소. 라우터·주차별 개념 비교 |
-| [imdohyeon/React2](https://github.com/imdohyeon/React2) | [a271038](https://github.com/imdohyeon/React2/commit/a271038cb0458eff7c2708c726144f621f0a64ce) | 10/05 16:00:53 | 1–5주차 목차와 정적 경로 생성 설명 보완 |
-| [umteahoon/React2](https://github.com/umteahoon/React2) | [c4bddfd](https://github.com/umteahoon/React2/commit/c4bddfd39735f22c433b9d31fbe4db62889d2934) | **10/07 10:40:30** | 재확인한 최신 커밋. README 내용은 94ae932의 5주차 기록과 동일 |
+| [wpexq/React2](https://github.com/wpexq/React2) | [fb552ef](https://github.com/wpexq/React2/commit/fb552ef777c80ddf613996f5e418b9d823750a52) | 10/11 16:05:26 | README에 Week 6 추가, 이전 주차는 구분선 정리 |
+| [wlswodnjs/react-02](https://github.com/wlswodnjs/react-02) | [39ab8f4](https://github.com/wlswodnjs/react-02/commit/39ab8f4bfaeacc2cf6e56f689cb8fa590bdb8523) | 10/07 12:51:10 | Week 6, blog3 목록·상세·데이터, 분석 플러그인·설정·잠금 파일 |
+| [jinwooorp/React2](https://github.com/jinwooorp/React2) | [a97e3ae](https://github.com/jinwooorp/React2/commit/a97e3ae2d1d91c70980e0d70392ac38ce868500c) | 10/07 13:22:09 | readme.md에 1007 수업 추가 |
+| [gkfg/Daelim-React2](https://github.com/gkfg/Daelim-React2) | [852b410](https://github.com/gkfg/Daelim-React2/commit/852b4109851b5b4348e00c230acff3e32cc1f69b) | 09/30 12:42:23 | 변경 없음, 5주차까지 |
+| [onejae17/React2](https://github.com/onejae17/React2) | [d600f03](https://github.com/onejae17/React2/commit/d600f03459e5c303f4d446271e47126e96f9700d) | 10/07 12:41:14 | 6주차, 정적 생성 비교, 스피너 CSS, hydration |
+| [imdohyeon/React2](https://github.com/imdohyeon/React2) | [108bc5d](https://github.com/imdohyeon/React2/commit/108bc5de8624f0e84a708aa0edaabd11368fb16f) | 10/07 12:50:10 | 6주차, async·정적 생성·느린 네트워크·컴포넌트 구분 |
+| [umteahoon/React2](https://github.com/umteahoon/React2) | [2a90450](https://github.com/umteahoon/React2/commit/2a90450ad1f0e30da9471dffcac27601716a676a) | 10/07 12:16:46 | Week 6 문서. 앞선 c4bddfd의 blog2·blog3·contact 코드도 이번 앱에 통합 |
+
+## 2026-10-13 반영 파일
+
+| 현재 파일 | 원본 및 반영 내용 |
+| --- | --- |
+| `RENAMED.md`, `README.md` | 새 기록이 있는 6개 저장소의 10/07 수업을 같은 날짜 아래에 종합. 기존 1–5주차 본문 유지 |
+| 두 문서의 제목 | 사용자 원격 커밋 50897e0의 `202130433 최현욱 수업기록` 유지·통일 |
+| `src/app/blog2/[slug]/page.tsx` | umteahoon의 요청 시점 글 조회. 없는 데이터는 notFound 처리 |
+| `src/app/blog2/page.tsx` | 원본 메뉴의 누락된 목록 경로를 보완. 프리페칭을 끈 링크에 이동 표시 연결 |
+| `src/app/blog3/page.tsx`, `[slug]/page.tsx`, `posts.ts` | wlswodnjs의 정적 생성 예제 통합. 데이터는 기존 blog의 같은 4개 글을 공유 |
+| `src/app/contact/page.tsx` | umteahoon의 contact 페이지 반영. wlswodnjs의 일반 a 이동 예제와 연결 |
+| `src/app/ui/loading-indicator.tsx` | 6주차 문서의 useLinkStatus를 Link 하위 컴포넌트로 구현 |
+| `src/app/ui/hover-prefetch-link.tsx` | 문서의 호버 프리페칭을 구현하고 키보드 포커스에도 적용 |
+| `src/app/globals.css` | 스피너의 100ms 표시 지연, 고정 크기 영역, 동작 줄이기 설정 지원 |
+| `src/app/layout.tsx`, `page.tsx` | 새 실습 메뉴와 6주차 경로 연결 |
+| `next.config.ts` | wlswodnjs의 ANALYZE 설정, 자동 브라우저 열기 비활성화 |
+| `package.json`, `package-lock.json` | npm 기준 analyzer 추가. Next.js 관련 패키지 16.3.8로 맞추고 호환 범위 내 의존성 수정 |
+| `my-next-app/README.md` | 새 경로와 Webpack 번들 분석 실행 방법 |
+
+이전 `/blog` 공통 레이아웃 예제는 유지했다. umteahoon의 blog3 목록은 blog2로 연결돼 있어, 정적 생성 상세 경로까지 갖춘 wlswodnjs의 blog3를 통합 기준으로 사용했다. 다른 저장소의 node_modules·pnpm 잠금 파일·개인 이름·에이전트 설정은 옮기지 않았다.
+
+## 6주차 내용 대조와 보정
+
+- **generateStaticParams**: umteahoon·onejae17·imdohyeon·jinwooorp의 빌드 순서와 유무 비교를 합쳤다. 반환값은 문자열 배열이 아니라 params 객체 배열이다.
+- **async**: 새 기록이 있는 6개 저장소의 설명을 합쳤다. Server Component에서 사용할 수 있지만 모든 컴포넌트에 필수는 아니며 Client Component는 async 함수로 만들지 않는다.
+- **느린 네트워크**: useLinkStatus는 Link 하위에서 사용하고, 미리 로드된 페이지에서는 표시가 생략될 수 있음을 명시했다.
+- **프리페칭**: `prefetch={false}`와 호버 프리페칭을 구분했다. 원본의 `prefetch="{false}"` 표기는 수정했다. jinwooorp의 useEffect 반복 예제는 호버 전용이 아닌 수동 프리페칭으로 설명했다.
+- **hydration**: 서버 HTML과 클라이언트 상호작용의 연결, 큰 JS의 영향을 정리했다. 분석 플러그인이 의존성을 자동 삭제한다는 식의 설명은 수정했다.
+- **서버·클라이언트**: wpexq·wlswodnjs·jinwooorp·imdohyeon의 상태·이벤트·브라우저 API와 서버 조회·비밀 값 처리 기준을 종합했다.
+
+공식 검증 자료: [useLinkStatus](https://nextjs.org/docs/app/api-reference/functions/use-link-status), [Prefetching](https://nextjs.org/docs/app/guides/prefetching), [서버·클라이언트 컴포넌트](https://nextjs.org/docs/app/getting-started/server-and-client-components), [번들 분석](https://nextjs.org/docs/app/guides/package-bundling). 설치된 Next.js 동봉 문서도 확인했다.
+
+## 의존성 점검
+
+기존 Next.js 16.3.5에 npm audit 보안 공지가 있어 16.3.8 패치로 갱신했다. eslint-config-next와 @next/bundle-analyzer도 같은 버전으로 맞췄다. 호환 가능한 수정은 `npm audit fix`로 적용했다.
+
+운영 의존성 검사 `npm audit --omit=dev`는 0건이다. 전체 검사에는 ESLint의 braces → micromatch → fast-glob 의존성 경로 관련 high 5건이 남는다. npm이 제안한 강제 수정은 eslint-config-next 14.2.35로의 주요 버전 다운그레이드여서 적용하지 않았다.
+
+## 2026-10-13 검증 결과
+
+- ESLint: 오류·경고 없이 통과.
+- Next.js 16.3.8 기본 Turbopack 빌드: TypeScript 검사 및 빌드 통과.
+- `ANALYZE=true` Webpack 빌드: 통과. client·nodejs·edge HTML 분석 보고서 생성 확인. 실제 edge 번들은 없어 해당 보고서는 통계 기반 안내를 출력했다.
+- 프로덕션 서버 HTTP 25개 요청: 홈·기존 경로·Blog2·Blog3의 글 4개씩·Contact·검색 매개변수 정상 응답, 각 블로그의 없는 글과 없는 일반 경로 404 확인.
+- prerender manifest: Blog3의 글 4개 사전 생성과 Blog2 상세의 요청 시점 처리 확인.
+- 기존 스트리밍: 약 14ms에 fallback, 약 2,017ms에 본문 도착 확인. 로컬 관찰값이다.
+- 문서: 날짜 6개 내림차순, 내부 링크·코드 블록·UTF-8, README/RENAMED 본문 일치, 사용자 제목 유지 확인.
+- 연결된 자동화 브라우저가 없어 실제 클릭·호버·스피너의 시각적 동작은 검증하지 못했다. 관련 코드는 타입·빌드·서버 렌더링 검사까지 수행했다.
+
+---
+
+## 이전 반영 기록 (2026-10-07)
+
+아래 기록은 최초 통합 시점의 내용이며, 현재 상태는 위 2026-10-13 표를 기준으로 한다.
+
 
 ## 날짜별 원본 대조
 

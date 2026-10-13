@@ -22,12 +22,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/">홈</Link>
             <Link href="/about">레이아웃</Link>
             <Link href="/blog">블로그</Link>
+            <Link href="/blog2">Blog2</Link>
+            <Link href="/blog3">Blog3</Link>
             <Link href="/products">검색 매개변수</Link>
             <Link href="/streaming" prefetch={false}>스트리밍</Link>
+            {/* 일반 문서 이동과 Link를 비교하는 수업용 링크입니다. */}
+            <a href="/contact">Contact</a>
           </nav>
         </header>
         <main id="content" className="site-main">{children}</main>
-        <footer className="site-footer">Next.js 수업 기록 · 2026년 1–5주차</footer>
+        <footer className="site-footer">Next.js 수업 기록 · 2026년 1–6주차</footer>
       </body>
     </html>
   );
