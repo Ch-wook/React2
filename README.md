@@ -2,9 +2,9 @@
 
 ## 2026-11-11 (Week 11)
 
-### 1. Context Provider 코드 읽기
+### 1. Context Provider 복습
 
-지난 시간에 만든 테마 기능을 `Context 생성 → Provider 배치 → Consumer 사용` 순서로 다시 살펴봤다. Context는 공유할 값의 통로이고, 실제로 바뀌는 값은 Provider 안의 state가 관리한다.
+테마 상태는 ThemeProvider에서 관리한다. 하위 컴포넌트는 Context로 현재 테마와 변경 함수를 받아서 사용한다.
 
 #### 1.1 타입과 기본값
 
@@ -21,10 +21,10 @@ export const ThemeContext = createContext<ThemeContextValue>({
 });
 ```
 
-- `'light' | 'dark'`: 두 문자열 중 하나만 허용하는 문자열 리터럴 유니온 타입이다. 다른 값을 넣는 실수를 타입 검사로 잡을 수 있다.
-- `toggleTheme: () => void`: 인자를 받지 않고 반환값을 사용하지 않는 함수다.
-- `createContext`의 기본값은 위쪽에 해당 Provider가 없을 때 사용하는 fallback이다. Provider가 있으면 `value`에 넣은 값이 우선한다.
-- 기본값의 빈 함수는 테마를 바꾸지 않는다. 실제 변경 함수는 `ThemeProvider`에서 만들어 전달한다.
+- `'light' | 'dark'`: light와 dark 중 하나만 넣을 수 있는 유니온 타입
+- `toggleTheme: () => void`: 인자 없이 호출하며 반환값을 사용하지 않음
+- `createContext`의 기본값은 Provider가 없을 때 사용한다. Provider가 있으면 `value`를 읽는다.
+- 기본값의 빈 함수는 아무 동작도 하지 않는다. 실제 토글 함수는 ThemeProvider에서 전달한다.
 
 ```tsx
 const [theme, setTheme] = useState<Theme>('light');
@@ -33,7 +33,7 @@ const toggleTheme = () => {
 };
 ```
 
-`useState`의 초기값은 `light`다. 함수형 업데이트는 직전 상태를 받아 다음 상태를 계산한다.
+처음에는 light로 시작한다. `setTheme`에 함수를 넘기면 이전 테마를 기준으로 다음 값을 정할 수 있다.
 
 #### 1.2 useEffect와 data-theme
 
@@ -47,13 +47,13 @@ useEffect(() => {
 
 | 코드 | 의미 |
 | --- | --- |
-| `useEffect` | 렌더링 결과가 반영된 뒤 외부 DOM과 상태를 동기화 |
-| `typeof window !== 'undefined'` | 브라우저 객체가 있는 환경인지 확인 |
+| `useEffect` | 렌더링 후 theme을 DOM에 반영 |
+| `typeof window !== 'undefined'` | 브라우저 환경인지 확인 |
 | `document.documentElement` | 현재 문서의 `<html>` 요소 |
-| `.dataset.theme = theme` | HTML의 `data-theme` 속성을 현재 상태로 변경 |
+| `.dataset.theme = theme` | `data-theme` 속성 변경 |
 | `[theme]` | 최초 마운트와 theme 값이 바뀐 뒤 Effect 실행 |
 
-`theme`이 `dark`면 `<html data-theme="dark">`가 된다. `useEffect`는 서버 렌더링 중에는 실행되지 않는다. 수업의 환경 확인 조건은 브라우저 객체를 다루는 위치를 구분하기 위한 것이다.
+`theme`이 dark면 HTML에 `data-theme="dark"`가 붙는다. Effect는 처음 마운트될 때와 theme이 바뀔 때 실행되며, 서버 렌더링 중에는 실행되지 않는다.
 
 #### 1.3 CSS 속성 선택자
 
@@ -74,7 +74,7 @@ body {
 }
 ```
 
-`[data-theme='dark']`는 속성값으로 요소를 선택한다. Context의 값을 바꾸는 것과 실제 화면 색상을 바꾸는 것은 별개다. `useEffect`가 HTML 속성을 바꾸고, CSS가 그 속성에 맞는 색상을 적용해야 테마 변화가 보인다. 속성 선택자를 쓴다고 모든 CSS 충돌이 자동으로 없어지는 것은 아니다.
+`html[data-theme='dark']`는 data-theme이 dark인 html을 선택한다. 테마를 바꿔도 색이 그대로라면 CSS가 이 속성을 사용하고 있는지 확인해야 한다.
 
 ### 2. ThemeStatus와 Provider 배치
 
@@ -100,9 +100,12 @@ export default function ThemeStatus() {
 }
 ```
 
-`useContext`는 현재 컴포넌트 위에 있는 가장 가까운 `ThemeContext.Provider`의 값을 읽는다. `ThemeStatus`는 전달받은 함수를 실행하고, Provider는 상태를 변경한다. `aria-label`은 버튼 이름, `aria-pressed`는 토글 상태를 보조 기술에 전달한다.
+`useContext`는 가장 가까운 Provider의 값을 읽는다. 버튼을 누르면 받아 온 `toggleTheme`이 실행된다.
 
-RootLayout은 Server Component로 유지하고, `<body>` 안에서 공통 화면을 감싼다.
+- `aria-label`: 화면 낭독기에 전달할 버튼 이름
+- `aria-pressed`: 토글이 켜져 있는지 표시
+
+RootLayout은 Server Component로 두고, body 안에 ThemeProvider를 넣는다.
 
 ```tsx
 <html lang="ko" data-theme="light">
@@ -116,17 +119,17 @@ RootLayout은 Server Component로 유지하고, `<body>` 안에서 공통 화면
 </html>
 ```
 
-Provider는 값이 필요한 범위를 감싸도록 배치한다. `useEffect`가 `<html>` 속성을 바꿀 수 있다는 사실과 Context를 읽을 수 있는 범위는 다르다. Provider 밖의 컴포넌트는 이 Provider가 제공하는 값을 읽지 못한다. `children`으로 받은 서버 UI도 이 구조 때문에 모두 Client Component로 바뀌는 것은 아니다.
+테마를 사용할 컴포넌트는 Provider 안에 있어야 한다. Provider가 html의 속성을 바꾸더라도 바깥 컴포넌트까지 Context를 읽을 수 있는 것은 아니다.
 
 ### 3. Context Provider 동작 순서
 
-1. RootLayout이 ThemeProvider와 페이지를 구성한다.
-2. ThemeProvider가 `useState`로 theme을 만들고 `value={{ theme, toggleTheme }}`를 제공한다.
-3. ThemeStatus가 `useContext`로 현재 값과 함수를 읽는다.
-4. 사용자가 버튼을 누르면 `toggleTheme()`가 `setTheme()`을 호출한다.
-5. Provider와 해당 Context를 사용하는 Consumer가 새 값으로 렌더링된다.
-6. 변경이 반영된 뒤 Effect가 `data-theme`를 갱신한다.
-7. CSS 선택자가 새 테마의 스타일을 적용한다.
+1. RootLayout에서 ThemeProvider를 렌더링한다.
+2. Provider가 theme과 toggleTheme을 value로 넘긴다.
+3. ThemeStatus에서 useContext로 값을 읽는다.
+4. 버튼 클릭 → toggleTheme → setTheme 실행.
+5. Provider와 Context를 읽는 컴포넌트가 새 값으로 렌더링된다.
+6. Effect가 html의 data-theme을 바꾼다.
+7. 바뀐 속성에 맞춰 CSS가 적용된다.
 
 ```text
 버튼 클릭 → toggleTheme → setTheme
@@ -138,11 +141,11 @@ Provider는 값이 필요한 범위를 감싸도록 배치한다. `useEffect`가
                  useEffect → data-theme → CSS
 ```
 
-Context 값의 변화는 그 값을 읽는 Consumer에게 전달된다. 모든 하위 Server Component가 브라우저에서 다시 실행된다는 뜻은 아니다.
+Provider 안에 넣었다고 Server Component까지 브라우저에서 다시 실행되지는 않는다.
 
 ### 4. 외부(Third-party) Component
 
-외부 UI 패키지도 상태나 이벤트를 사용하면 Client Component 경계가 필요하다. 수업에서는 `acme-carousel`을 예로 들었다. 패키지에 `'use client'` 표시가 없는 경우, 내 Client Component에서 가져와 사용하거나 별도의 래퍼를 만든다.
+`acme-carousel`처럼 useState를 쓰는 외부 컴포넌트에 `'use client'`가 없다면 Client Component 안에서 불러온다. 아래처럼 래퍼 파일을 하나 만들어도 된다.
 
 ```tsx
 // 외부 패키지가 설치되어 있고 해당 export를 제공할 때의 래퍼 예시
@@ -153,18 +156,18 @@ import { Carousel } from 'acme-carousel';
 export default Carousel;
 ```
 
-Server Component는 이 래퍼를 import해 렌더링할 수 있다. 페이지 전체에 `'use client'`를 추가할 필요는 없다.
+서버 페이지에서는 이 파일을 import하면 된다. 페이지 전체에 `'use client'`를 붙일 필요는 없다.
 
-#### 4.1 모듈 오류와 필수 props 오류
+#### 4.1 설치 후 확인할 오류
 
 | 오류 | 확인할 부분 |
 | --- | --- |
-| `Cannot find module 'acme-carousel'` | 실행하는 프로젝트의 패키지 설치, import 이름과 경로 |
-| `Property 'items' is missing` | 실제 패키지 타입에서 필수로 정한 props |
-| import한 export가 없다는 오류 | default export와 named export 구분 |
+| `Cannot find module 'acme-carousel'` | 패키지 설치 여부, import 경로 |
+| `Property 'items' is missing` | 필수 props인 items 전달 여부 |
+| export를 찾을 수 없음 | default / named export 구분 |
 | 동작하지만 이미지 배치가 깨짐 | 패키지 스타일 import와 CSS 경로 |
 
-모듈을 찾지 못하는 오류와 props가 빠진 오류는 서로 다르다. 설치가 끝났어도 필수 데이터를 넘기지 않으면 타입 오류가 남는다.
+패키지를 설치한 뒤에도 items를 넘기지 않으면 타입 오류가 난다. 설치 문제와 props 누락을 따로 확인해야 한다.
 
 #### 4.2 items와 조건부 렌더링
 
@@ -194,17 +197,21 @@ export default function Gallery() {
 }
 ```
 
-`items`의 각 요소는 식별자 `id`, 이미지 주소 `src`, 대체 텍스트 `alt`를 갖는다. `isOpen`이 참일 때만 캐러셀을 렌더링한다. 첨부된 실습의 `LocalCarousel`은 이 데이터 전달 방식을 연습하는 로컬 구현이다. 외부 패키지 전체 기능이나 API를 복제한 것은 아니다.
+- `id`: 항목 구분
+- `src`: 이미지 주소
+- `alt`: 이미지 대체 텍스트
+
+버튼을 누르면 isOpen이 바뀌고, true일 때 캐러셀이 나온다. 여기서는 같은 items 형태를 받는 로컬 실습 컴포넌트 `LocalCarousel`을 사용했다.
 
 #### 4.3 CSS와 export 확인
 
-첨부 자료에서는 `acme-carousel/dist/styles.css`를 가져오는 과정의 오류와, 로컬 스타일 파일을 import하는 해결 과정을 정리했다. 실제 패키지를 사용할 때는 설치된 버전의 `exports`, 타입 선언, 스타일 경로를 확인한다.
+`acme-carousel/dist/styles.css`를 가져오지 못하면 패키지의 CSS 경로를 확인한다. 스타일을 로컬 파일로 두는 경우에는 컴포넌트에서 직접 import한다.
 
 ```tsx
 import './styles.css';
 ```
 
-Named export는 중괄호를 사용하고, default export는 중괄호 없이 가져온다.
+Named export는 중괄호를 붙이고, default export는 붙이지 않는다.
 
 ```tsx
 // 패키지가 제공하는 export 형태를 먼저 확인한다.
@@ -212,9 +219,7 @@ import { Carousel } from 'acme-carousel';
 import Slide from 'acme-carousel';
 ```
 
-위 `Slide` 구문은 첨부된 강의 정리의 예시다. 모든 버전에서 동일하다고 가정하지 않는다. 캐러셀의 인덱스·자동 재생·내비게이션·페이지 표시·터치·반응형 옵션도 해당 라이브러리의 타입과 문서를 기준으로 사용한다.
-
-참고: [11주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조) · [첨부 11월 11일 정리](docs/lecture-materials/nov11/11월11일_강의_전체_정리.md)
+위 import는 강의 예제 기준이다. 설치한 버전의 export와 CSS 경로가 다를 수 있으니 타입 선언도 같이 확인한다.
 
 ---
 
@@ -222,7 +227,7 @@ import Slide from 'acme-carousel';
 
 ### 1. Server에서 Client로 데이터 전달
 
-Server Component에서 조회한 값을 Client Component의 props로 전달한다. 지난 시간의 글 상세 페이지가 `likes`를 넘기고, LikeButton이 이를 state의 초기값으로 사용하는 구조다.
+서버 페이지에서 글을 찾고 `post.likes`를 LikeButton에 넘긴다. 버튼은 이 값을 state의 초기값으로 사용한다.
 
 ```tsx
 // Server Component 내부
@@ -232,16 +237,16 @@ if (!post) notFound();
 return <LikeButton key={post.id} likes={post.likes} />;
 ```
 
-Client Component 경계를 넘는 값은 React가 직렬화할 수 있어야 한다. 직렬화는 메모리의 구조를 전송 가능한 표현으로 바꾸는 과정이고, 받는 쪽에서는 이를 다시 해석한다.
+서버에서 클라이언트로 넘기는 props는 React가 직렬화할 수 있어야 한다. 직렬화는 객체 같은 데이터를 전송할 수 있는 형태로 바꾸는 과정이다.
 
-- 문자열·숫자·불리언과 지원되는 배열·객체 등을 전달할 수 있다.
-- 일반 이벤트 콜백을 서버에서 만들어 Client Component의 `onClick`에 그대로 전달할 수는 없다. 클릭 로직은 클라이언트 쪽에 둔다.
-- React의 직렬화 범위는 단순히 `JSON.stringify`가 가능한 값만을 뜻하지 않는다. Server Function 참조 등에는 별도 규칙이 있다.
-- 비동기 데이터를 Promise로 전달하고 `use`로 읽는 스트리밍 패턴도 있다. 이번 실습은 조회 결과를 props로 전달하는 방식이다.
+- 문자열, 숫자, 불리언, 지원되는 배열·객체 등을 전달할 수 있다.
+- 일반 onClick 함수는 서버에서 만들어 넘기지 않고 Client Component 안에 작성한다.
+- React가 전달할 수 있는 값의 범위와 JSON의 범위는 다르다. Server Function 참조에도 별도 규칙이 있다.
+- Promise를 넘겨 `use`로 읽는 방식도 있다. 이번 예제는 조회한 값을 props로 넘긴다.
 
 ### 2. Server / Client Component Interleaving
 
-여기서 인터리빙은 Server Component와 Client Component를 한 화면에 조합하는 패턴이다. 서버에서 준비한 UI를 Client Component의 `children` 자리에 넣는다.
+서버에서 만든 UI를 Client Component의 `children`에 넣어 함께 보여주는 방식.
 
 ```tsx
 // src/components/ClientLayout.tsx
@@ -259,7 +264,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-`children`은 서버에서 구성한 내용을 끼워 넣을 공간이다.
+`children`이 서버에서 만든 내용을 넣을 자리다.
 
 ```tsx
 // src/components/ServerContent.tsx — 핵심 흐름
@@ -287,13 +292,13 @@ export default function InterleavedPage() {
 }
 ```
 
-두 컴포넌트를 조합하는 `page.tsx`가 Server Component라는 점이 중요하다. `ClientLayout.tsx`에서 서버 전용 모듈을 import해서 실행하는 방식과 구분한다. 서버는 `ServerContent`의 결과를 준비하고, ClientLayout은 받은 내용을 자신의 화면 안에 배치한다.
+`page.tsx`에서 두 컴포넌트를 import하고 조합한다. ClientLayout은 children을 받아 출력하고, ServerContent의 fetch는 서버에서 실행된다. 서버 전용 파일을 ClientLayout 안에서 직접 import하지 않도록 주의.
 
 ### 3. Context와 Props Drilling
 
-깊은 하위 컴포넌트에서 테마를 쓰려면 중간 컴포넌트들이 쓰지도 않는 props를 계속 전달해야 할 수 있다. 이런 전달이 반복되는 것이 Props Drilling이다.
+Props Drilling: 아래쪽 컴포넌트에 값을 전달하려고 중간 컴포넌트들이 쓰지 않는 props까지 계속 넘기는 것.
 
-Context는 Provider 아래에서 공통 값을 읽는 방법이다. 테마·언어·사용자 정보처럼 여러 위치에서 필요한 데이터에 사용할 수 있다. 모든 상태를 Context로 올릴 필요는 없으며, 한 컴포넌트만 사용하는 값은 로컬 state로 두어도 된다.
+Context를 쓰면 중간 전달 없이 필요한 컴포넌트에서 값을 읽을 수 있다. 테마, 언어 설정, 사용자 정보처럼 여러 곳에서 쓰는 값에 활용한다. 한 곳에서만 쓰는 상태는 로컬 state로 두면 된다.
 
 | 구성 | 역할 |
 | --- | --- |
@@ -302,7 +307,7 @@ Context는 Provider 아래에서 공통 값을 읽는 방법이다. 테마·언�
 | `Context.Provider` | 하위 트리에 실제 value 제공 |
 | `useContext` | 가장 가까운 Provider의 value 읽기 |
 
-Server Component에서 클라이언트 Context를 직접 읽지는 않는다. 상태와 Context를 담당하는 Provider는 Client Component로 만들고, Server Layout에서 렌더링한다.
+Context를 만들고 읽는 부분은 Client Component에 둔다. Server Layout에서는 Provider를 불러와 화면을 감싼다.
 
 ### 4. ThemeProvider 구현
 
@@ -337,9 +342,9 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 }
 ```
 
-Provider의 `value`에는 현재 상태와 상태 변경 함수를 함께 넣는다. 소비자는 Provider의 state를 직접 수정하는 대신 제공받은 함수를 호출한다. 이 함수는 클라이언트 Provider 안에서 만들어지므로 서버에서 일반 함수를 직렬화해 보내는 상황과 다르다.
+`value`에 theme과 toggleTheme을 같이 넣는다. ThemeStatus는 theme을 표시하고, 버튼을 누르면 toggleTheme을 호출한다.
 
-### 5. RootLayout 연결과 확인
+### 5. RootLayout에 연결
 
 ```text
 RootLayout (Server)
@@ -350,9 +355,7 @@ RootLayout (Server)
          └─ ServerContent의 렌더링 결과
 ```
 
-헤더에 ThemeStatus를 두고 Provider 안에 공통 화면을 배치한다. 테마 버튼을 눌렀을 때 버튼의 글자뿐 아니라 `html`의 `data-theme`와 페이지 색상까지 바뀌는지 확인한다. 새 문서를 불러오면 메모리의 state는 초기화되며, 별도 저장 로직이 없다면 테마도 초기값으로 돌아간다.
-
-참고: [10주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조) · [첨부 11월 4일 정리](docs/lecture-materials/nov11/11월4일_강의_구간별_총정리.md)
+헤더에 ThemeStatus를 넣으면 각 페이지에서 같은 테마 버튼을 사용할 수 있다. 버튼을 눌러 html의 data-theme과 배경색이 함께 바뀌는지 확인한다. 저장 기능은 넣지 않았으므로 새로고침하면 light로 돌아간다.
 
 ---
 
@@ -360,7 +363,7 @@ RootLayout (Server)
 
 ### 1. Client JavaScript Bundle 크기 줄이기
 
-화면 전체를 Client Component로 만들기보다 상태와 이벤트가 필요한 부분을 분리한다. `'use client'` 경계 아래로 import한 모듈은 클라이언트 번들에 포함될 수 있으므로, 경계를 크게 잡을수록 브라우저가 받아야 할 코드가 늘어난다.
+상태나 클릭 이벤트가 필요한 부분에만 `'use client'`를 붙인다. 이 파일에서 import하는 코드도 클라이언트 번들에 포함되므로, 화면 전체를 Client Component로 만들면 보낼 JS가 많아진다.
 
 ```text
 Layout (Server)
@@ -369,11 +372,11 @@ Layout (Server)
 └─ Search (Client: 입력 상태·이벤트)
 ```
 
-Search에 입력 상태가 필요하더라도 Layout 전체를 Client Component로 바꿀 필요는 없다. Logo를 서버에 두는 이유는 중요도가 낮아서가 아니라 클라이언트 상태와 이벤트가 필요하지 않기 때문이다. Server Component로 바꾼다고 이미지 파일의 크기 자체가 줄어드는 것은 아니다.
+Search는 입력을 처리하므로 Client Component로 분리한다. Logo와 나머지 Layout은 서버에 둔다. 이렇게 줄이는 것은 브라우저에서 실행할 JS이며, 이미지 파일 크기와는 별개다.
 
 ### 2. Counter 컴포넌트와 페이지
 
-재사용할 UI 조각은 `components`에 두고, URL에 연결할 페이지는 `app/counter/page.tsx`에 둔다.
+Counter는 `components`에 만들고, `/counter` 페이지에서 불러온다.
 
 ```tsx
 // src/components/Counter.tsx
@@ -403,7 +406,7 @@ export default function CounterPage() {
 }
 ```
 
-페이지는 서버에서 구성하고 클릭할 때 바뀌는 부분만 클라이언트에서 처리한다. 각 자료의 초기 숫자는 0·5·12 등으로 다르지만, `useState`와 함수형 업데이트를 연결하는 흐름은 같다.
+페이지는 서버 컴포넌트, Counter는 클라이언트 컴포넌트다. 초기값 12에서 버튼을 누를 때마다 1씩 증가한다.
 
 ### 3. 동적 세그먼트와 LikeButton 연결
 
@@ -424,7 +427,7 @@ const post: Post = {
 };
 ```
 
-`src/app/[id]/page.tsx`는 `await params`로 id를 읽고 해당 글을 찾는다. 서버에서 찾은 글의 `likes`를 Client Component로 넘긴다.
+`await params`로 id를 읽고, posts에서 같은 id의 글을 찾는다. 찾은 글의 likes를 버튼에 전달한다.
 
 ```tsx
 import LikeButton from '@/ui/LikeButton';
@@ -450,13 +453,13 @@ export default async function PostPage({
 }
 ```
 
-`key={post.id}`는 다른 글로 이동했을 때 좋아요의 로컬 상태도 새 글 기준으로 시작하게 한다. `useState(likes)`는 매 렌더링마다 props로 state를 덮어쓰는 코드가 아니다.
+`useState(likes)`의 likes는 처음 상태를 만들 때 쓰는 값이다. 다른 글로 이동하면 새 상태로 시작하도록 `key={post.id}`를 붙였다.
 
 ### 4. 좋아요 상태와 공통 메뉴
 
-LikeButton은 초기 숫자를 받은 뒤 클릭하면 즉시 1을 더한다. `isLiking`이 참인 동안 버튼을 비활성화하고, 수업용 지연 뒤 다시 활성화한다. 자료의 예제에는 실제 저장 API가 없으므로 새로고침하면 서버의 초기값이 다시 표시된다.
+클릭하면 count를 바로 1 올리고 isLiking을 true로 바꾼다. 잠깐 버튼을 막았다가 지연이 끝나면 다시 활성화한다. 서버 저장은 없어서 새로고침하면 초기 좋아요 수로 돌아간다.
 
-공통 메뉴는 RootLayout에 둔다. 글 데이터의 id와 href를 동일하게 맞춰야 한다.
+공통 메뉴는 RootLayout에 작성한다. href와 글의 id가 맞아야 한다.
 
 ```tsx
 <nav>
@@ -468,9 +471,7 @@ LikeButton은 초기 숫자를 받은 뒤 클릭하면 즉시 1을 더한다. `i
 </nav>
 ```
 
-폴더가 `[id]`여도 실제 값은 숫자일 필요가 없다. `nextjs` 같은 문자열로 데이터를 찾을 수 있다. 배열에 없는 id는 `notFound()`로 처리한다.
-
-참고: [9주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조)
+`[id]`의 값이 꼭 숫자일 필요는 없다. 이 예제는 nextjs 같은 문자열을 사용한다. 없는 글은 `notFound()`로 처리한다.
 
 ---
 
@@ -478,7 +479,7 @@ LikeButton은 초기 숫자를 받은 뒤 클릭하면 즉시 1을 더한다. `i
 
 ### 1. Server Component와 Client Component의 역할
 
-서버에서는 게시글을 조회하고, 브라우저에서는 좋아요 클릭과 상태 변경을 처리하는 예제를 작성했다. 화면을 구성하는 페이지와 상호작용을 담당하는 버튼의 역할을 나눠 보는 실습이다.
+게시글 조회는 서버에서, 좋아요 클릭은 클라이언트에서 처리한다. 서버 페이지가 글의 초기값을 버튼에 넘기는 예제다.
 
 | Server Component | Client Component |
 | --- | --- |
@@ -499,16 +500,17 @@ const [count, setCount] = useState<number>(likes ?? 0);
 const [isLiking, setIsLiking] = useState(false);
 ```
 
-- `count`: 초기 좋아요 수와 현재 화면에 표시할 숫자다.
-- `isLiking`: 요청 또는 수업용 지연을 처리 중인지 나타낸다.
-- 처리 중에는 `disabled={isLiking}`로 반복 클릭을 막고 로딩 표시를 연결할 수 있다.
-- 실제 서비스에서는 요청 성공·실패를 모두 처리하고 마지막에 대기 상태를 해제해야 한다.
+- `count`: 화면에 표시할 좋아요 수
+- `isLiking`: 처리 중인지 표시하는 상태
+- `disabled={isLiking}`으로 중복 클릭을 막는다.
+- 요청이 끝나면 성공·실패에 관계없이 대기 상태를 풀어 줘야 한다.
 
 ### 3. Falsy와 Null 병합 연산자
 
-Falsy는 Boolean 문맥에서 거짓으로 평가되는 값이다. 대표적으로 `false`, `0`, `-0`, `0n`, 빈 문자열, `null`, `undefined`, `NaN`이 있다. 빈 배열과 빈 객체는 truthy다.
+Falsy는 조건문에서 false로 취급되는 값이다. `false`, `0`, `-0`, `0n`, 빈 문자열, `null`, `undefined`, `NaN` 등이 있다. 빈 배열 `[]`과 빈 객체 `{}`는 truthy.
 
-`||`는 왼쪽이 falsy이면 오른쪽을 선택한다. `??`는 왼쪽이 `null` 또는 `undefined`일 때만 오른쪽을 선택한다.
+- `||`: 왼쪽이 falsy면 오른쪽 값 사용
+- `??`: 왼쪽이 null이나 undefined일 때만 오른쪽 값 사용
 
 ```ts
 0 || 10;          // 10
@@ -518,13 +520,13 @@ Falsy는 Boolean 문맥에서 거짓으로 평가되는 값이다. 대표적으�
 undefined ?? 0;   // 0
 ```
 
-좋아요 수가 0인 것은 정상적인 데이터이므로 `likes ?? 0`처럼 값이 빠진 경우만 보충한다.
+`likes ?? 0`은 좋아요가 0이면 그대로 두고, 값이 없을 때만 0으로 채운다.
 
 ### 4. Optimistic Update와 Pessimistic Update
 
 #### 4.1 낙관적 업데이트
 
-성공할 것으로 예상하고 UI를 먼저 바꾼 뒤 요청 결과를 확인한다. 반응은 빠르지만 실패했을 때 이전 상태를 복구하는 처리가 필요하다.
+화면을 먼저 바꾸고 서버 응답을 기다린다. 반응은 빠르지만 요청이 실패하면 이전 값으로 돌려놓는 rollback이 필요하다.
 
 ```text
 클릭 → 화면 숫자 증가 → 서버 요청 → 성공하면 유지
@@ -533,7 +535,7 @@ undefined ?? 0;   // 0
 
 #### 4.2 비관적 업데이트
 
-요청이 성공한 뒤에 UI를 바꾼다. 응답 전까지 로딩 표시가 필요하고, 사용자는 기다려야 한다. 성공 응답을 기준으로 반영해도 네트워크 실패나 동시 수정 가능성까지 자동으로 사라지는 것은 아니다.
+서버에서 성공 응답을 받은 뒤 화면을 바꾼다. 응답을 기다리는 동안에는 로딩 상태를 보여준다.
 
 | 비교 | 낙관적 업데이트 | 비관적 업데이트 |
 | --- | --- | --- |
@@ -542,25 +544,25 @@ undefined ?? 0;   // 0
 | 실패 대응 | 임시 변경 취소·오류 안내 | 기존 값 유지·오류 안내 |
 | 구현 시 주의 | rollback과 중복 요청 | 대기 상태와 중복 요청 |
 
-수업의 LikeButton은 로컬 state를 즉시 증가시키고 잠깐 비활성화하는 형태다. 실제 저장·실패 응답을 처리하지 않으므로 완전한 서버 연동 예제와는 구분한다. 응답이 늦다는 이유만으로 자동 rollback되는 것도 아니며, 실패·시간 초과 처리 코드를 직접 작성해야 한다.
+LikeButton 예제는 숫자만 먼저 올리는 로컬 실습이다. 실제 API를 붙이면 요청 실패와 시간 초과를 처리하고, 필요할 때 이전 값으로 되돌리는 코드도 작성해야 한다.
 
 ### 5. RSC Payload와 최초 로딩
 
-서버는 라우트의 layout과 page를 렌더링하며, Server Component 결과를 RSC Payload로 만든다. Payload에는 서버에서 준비한 결과, Client Component의 위치와 모듈 참조, 경계를 넘어 전달할 props가 담긴다.
+서버 컴포넌트의 렌더링 결과는 RSC Payload로 전달된다. 서버에서 만든 결과, Client Component의 위치와 모듈 참조, 전달할 props가 들어 있다.
 
-처음 접속했을 때는 다음 흐름을 따른다.
+첫 접속 시 처리 순서:
 
 1. HTML로 우선 화면을 보여준다.
 2. RSC Payload로 서버·클라이언트 컴포넌트 트리를 연결한다.
 3. 클라이언트 JavaScript가 hydration을 수행해 이벤트와 상태를 연결한다.
 
-Hydration은 서버가 만든 정적인 화면을 브라우저에서 상호작용할 수 있도록 연결하는 과정이다. Client Component도 최초 화면의 HTML 생성에 참여할 수 있으므로, `'use client'`가 서버에서 아무것도 렌더링하지 않는다는 뜻은 아니다.
+Hydration은 서버에서 받은 HTML에 이벤트와 상태를 연결하는 과정이다. Client Component도 첫 화면의 HTML 생성에는 참여한다.
 
-수업 자료에는 JSON과 바이너리의 비교도 나온다. 여기서는 RSC를 React 전용 직렬화 스트림으로 이해한다. 단순 JSON 응답과 같지 않으며, 모든 내용을 순수 이진 데이터라고 단정하거나 항상 JSON보다 빠르다고 일반화하지 않는다.
+RSC Payload는 React 전용 직렬화 스트림이다. 일반 JSON 응답과 같지 않고, 단순히 전부 바이너리라고 보는 것도 정확하지 않다.
 
 ### 6. 후속 내비게이션과 use client 경계
 
-Link로 이동할 때는 미리 가져오거나 캐시한 RSC Payload를 활용할 수 있다. 매번 전체 문서를 새로 받는 방식과 달리 필요한 화면을 갱신하며, 유지되는 레이아웃의 상태도 활용한다.
+Link로 이동할 때는 미리 받아 두거나 캐시한 RSC Payload를 사용한다. 공유 레이아웃은 유지하고 바뀌는 부분을 갱신한다.
 
 ```tsx
 'use client';
@@ -568,9 +570,7 @@ Link로 이동할 때는 미리 가져오거나 캐시한 RSC Payload를 활용�
 import { useState } from 'react';
 ```
 
-지시문은 import보다 앞에 둔다. 이 경계 아래로 import한 모듈은 클라이언트 번들의 일부가 된다. 다만 서버 부모가 만들어 `children`으로 넘긴 UI까지 Client Component로 바뀌는 것은 아니다. 이 차이는 10주차의 인터리빙에서 다시 확인한다.
-
-참고: [7주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조)
+`'use client'`는 import 위에 작성한다. 이 파일에서 import한 코드는 클라이언트 번들에 들어간다. 서버에서 만들어 children으로 넘긴 UI는 이 import 경계에 포함되지 않는다.
 
 ---
 
@@ -578,7 +578,7 @@ import { useState } from 'react';
 
 ### 1. generateStaticParams 실습
 
-동적 세그먼트의 값을 빌드 시점에 알고 있다면 `generateStaticParams`로 미리 만들 경로를 전달한다.
+`generateStaticParams`에 미리 만들 경로의 params 목록을 반환한다. 글의 slug를 빌드할 때 알 수 있는 경우에 사용한다.
 
 ```tsx
 // app/blog3/[slug]/page.tsx
@@ -614,7 +614,7 @@ export default async function Page({
 3. 빌드 과정에서 각 params에 해당하는 페이지를 렌더링한다.
 4. 사전 렌더링 가능한 결과를 생성해 요청 시 제공한다.
 
-`map()`이 HTML을 직접 만드는 것은 아니다. `map()`은 필요한 경로 목록을 만들고, 실제 페이지 생성은 Next.js의 빌드 과정이 담당한다.
+`map()`은 경로 목록을 만들고, 그 목록으로 페이지를 만드는 일은 Next.js가 한다.
 
 | 반환한 값 | 대응하는 경로 |
 | --- | --- |
@@ -622,7 +622,7 @@ export default async function Page({
 | `{ slug: "routing" }` | `/blog3/routing` |
 | `{ slug: "ssr-ssg" }` | `/blog3/ssr-ssg` |
 
-결과물의 실제 파일 위치와 형식은 빌드·배포 설정에 따라 달라지므로 항상 `/경로/index.html`이 생성된다고 보지는 않는다.
+빌드 결과의 파일 위치는 배포 설정에 따라 달라진다.
 
 #### 1.2 generateStaticParams가 없는 경우와 있는 경우
 
@@ -633,17 +633,17 @@ export default async function Page({
 | 첫 요청 | 서버에서 해당 글의 화면을 준비 | 미리 준비된 결과를 제공 가능 |
 | 추가 slug | 요청 때 데이터 존재 여부 확인 | `dynamicParams` 등 설정에 따라 추가 경로 처리 |
 
-두 방식 모두 서버에서 HTML을 제공할 수 있다. 정적 생성만 SEO가 가능한 것은 아니며, 실제 속도와 캐시 동작은 데이터 요청·설정에 따라 달라진다. 함수를 추가하더라도 요청 전용 API를 사용하는 부분까지 자동으로 정적 결과가 되지는 않는다.
+SSR과 정적 생성 모두 서버에서 HTML을 제공할 수 있다. `generateStaticParams`를 추가해도 요청 정보가 필요한 부분은 별도로 처리된다.
 
 ---
 
 ### 2. await이 없어도 async를 붙여 두는 이유
 
-Server Component는 비동기 함수로 작성할 수 있다. 현재는 더미 배열에서 값을 찾더라도 나중에 API나 DB 조회가 추가될 수 있어 수업 예제에서는 `async` 형태를 사용한다.
+지금은 더미 배열을 사용하지만 나중에 API나 DB 조회를 넣을 수 있어서 async로 작성해 둔다.
 
-- **일관성**: 데이터 조회 페이지의 함수 형태를 맞춘다.
-- **확장성**: `await fetch(...)`나 비동기 DB 호출을 추가하기 쉽다.
-- **Promise 지원**: Server Component는 Promise를 반환하는 비동기 렌더링을 지원한다.
+- 데이터 조회 함수의 작성 방식을 맞추기 편함
+- 나중에 `await fetch(...)`나 DB 호출을 추가하기 편함
+- Server Component에서 Promise를 반환할 수 있음
 
 ```tsx
 export default async function Page() {
@@ -651,17 +651,17 @@ export default async function Page() {
 }
 ```
 
-`async`는 모든 서버 컴포넌트에 필수인 규칙은 아니다. 비동기 처리가 없다면 일반 함수도 사용할 수 있다. Client Component 자체는 async 함수로 만들지 않는다.
+비동기 처리가 없다면 일반 함수로 작성해도 된다. Client Component 자체를 async 함수로 만들지는 않는다.
 
 ---
 
-### 3. Navigation이 느려지는 경우 — 이어서
+### 3. Navigation이 느려지는 경우
 
-#### 2.3 느린 네트워크
+#### 3.1 느린 네트워크
 
-정적·동적 경로 모두 네트워크가 느리면 클릭 전에 프리페칭이 끝나지 않을 수 있다. `loading.tsx`도 아직 도착하지 않았다면 즉시 표시하기 어렵다.
+네트워크가 느리면 클릭 전에 프리페칭이 끝나지 않을 수 있다. loading.tsx도 아직 못 받았다면 로딩 화면을 바로 보여주기 어렵다.
 
-이때 `useLinkStatus`로 클릭한 링크의 이동 상태를 보여줄 수 있다.
+`useLinkStatus`로 링크가 이동 중인지 표시할 수 있다.
 
 ```tsx
 // app/ui/loading-indicator.tsx
@@ -690,11 +690,11 @@ export default function Menu() {
 }
 ```
 
-`useLinkStatus`는 반드시 `Link`의 하위 컴포넌트에서 사용한다. 이미 프리페칭된 경로는 pending 단계가 짧거나 생략될 수 있다.
+`useLinkStatus`는 Link 안의 컴포넌트에서 사용한다. 이미 미리 받은 경로라면 pending이 거의 보이지 않을 수 있다.
 
 ##### 로딩 표시의 깜빡임 줄이기
 
-100ms 정도의 표시 지연을 주면 빠르게 끝나는 이동에서 스피너가 잠깐 나타났다 사라지는 현상을 줄일 수 있다. 표시 영역을 미리 확보하면 텍스트 위치도 흔들리지 않는다.
+스피너를 100ms 정도 늦게 표시하면 빠른 이동에서 깜빡이는 현상을 줄일 수 있다. 스피너 자리를 미리 잡아 두면 옆 글자도 밀리지 않는다.
 
 ```css
 .link-hint {
@@ -718,9 +718,9 @@ export default function Menu() {
 
 ---
 
-#### 2.4 프리페칭 비활성화
+#### 3.2 프리페칭 비활성화
 
-링크가 많은 테이블이나 목록에서는 사용하지 않을 경로까지 미리 가져오는 비용이 생길 수 있다. `prefetch={false}`를 지정하면 해당 링크의 자동 프리페칭을 끈다.
+링크가 많은 목록에서는 안 눌러 볼 페이지까지 미리 가져올 수 있다. 자동 프리페칭을 끄려면 `prefetch={false}`를 넣는다.
 
 ```tsx
 <Link href="/blog" prefetch={false}>Blog</Link>
@@ -732,7 +732,7 @@ export default function Menu() {
 
 ##### Hover Prefetching
 
-마우스를 올린 링크만 프리페칭하도록 하면 방문 가능성이 높은 경로에 요청을 집중할 수 있다.
+마우스를 올린 링크부터 미리 가져오는 방법도 있다.
 
 ```tsx
 "use client";
@@ -758,17 +758,17 @@ export default function HoverPrefetchLink({
 }
 ```
 
-`null`은 기본 프리페칭 동작으로 되돌린다. 키보드로 접근할 때도 적용되도록 포커스 이벤트를 함께 처리할 수 있다.
+`null`로 바꾸면 기본 프리페칭을 다시 사용한다. 키보드 이동도 처리하려면 onFocus를 함께 넣는다.
 
 ##### Manual Prefetching
 
-`useRouter()`의 `router.prefetch(href)`로 직접 프리페칭할 수도 있다. 일부 수업 자료의 `useEffect` 예제는 마운트 때 프리페칭하고 `onInvalidate`로 다시 요청하는 형태다. 호버했을 때만 실행하는 예제와 구분한다. 이동 자체는 `Link`를 사용하면 새 탭 열기와 키보드 조작 등 기본 링크 동작을 유지하기 쉽다.
+`router.prefetch(href)`로 직접 요청할 수도 있다. useEffect에서 실행하면 마운트 시 요청하고, onInvalidate로 다시 요청하도록 만들 수 있다. 호버할 때 실행하는 방식과는 다르다.
 
 ---
 
-#### 2.5 Hydration이 완료되지 않은 경우
+#### 3.3 Hydration 지연
 
-Hydration은 서버가 생성한 HTML에 클라이언트 JavaScript를 연결해 상호작용을 가능하게 하는 과정이다. `Link`의 클라이언트 기능도 hydration 이후 동작하므로 초기 JS가 크면 프리페칭 시작이 늦어질 수 있다.
+초기 JS가 크면 hydration이 늦어지고 Link의 프리페칭도 늦게 시작할 수 있다.
 
 - React의 선택적 hydration으로 필요한 부분을 우선 처리한다.
 - 큰 의존성이 어디에 포함되는지 번들을 분석한다.
@@ -777,7 +777,7 @@ Hydration은 서버가 생성한 HTML에 클라이언트 JavaScript를 연결해
 
 ##### @next/bundle-analyzer
 
-수업에서는 번들에 포함된 모듈과 크기를 확인하기 위해 `@next/bundle-analyzer`를 사용한다.
+번들에 어떤 모듈이 얼마나 들어 있는지 확인하는 도구.
 
 ```ts
 // next.config.ts
@@ -793,7 +793,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 export default withBundleAnalyzer(nextConfig);
 ```
 
-이 플러그인은 Webpack용이다. Next.js 16에서 분석할 때는 Webpack 빌드를 명시한다.
+Webpack용 플러그인이므로 Next.js 16에서는 아래처럼 실행한다.
 
 ```powershell
 $env:ANALYZE = "true"
@@ -801,13 +801,13 @@ try { npm.cmd run build -- --webpack }
 finally { Remove-Item Env:ANALYZE }
 ```
 
-분석기가 의존성을 자동으로 제거하지는 않는다. 결과를 보고 불필요한 의존성을 제거하거나 로딩 방식을 바꾸는 작업은 직접 해야 한다.
+분석 결과를 보고 필요 없는 의존성을 직접 줄인다. 플러그인이 알아서 제거해 주지는 않는다.
 
 ---
 
 ### 4. Server Component & Client Component
 
-서버와 브라우저는 사용할 수 있는 기능이 다르다. 필요한 작업이 어느 환경에 속하는지에 따라 컴포넌트를 나눈다.
+상태와 이벤트는 클라이언트, 데이터 조회는 서버 쪽에 두는 식으로 나눈다.
 
 #### 4.1 Client Component를 사용하는 경우
 
@@ -816,7 +816,7 @@ finally { Remove-Item Env:ANALYZE }
 - `window`, `localStorage`, `navigator.geolocation` 등 브라우저 API
 - 위 기능에 의존하는 사용자 정의 Hook
 
-파일 상단에 `'use client'`를 선언한다. 브라우저 API는 적절한 이벤트나 effect 안에서 접근한다. Client Component도 초기 HTML 생성에 참여할 수 있으므로 서버 렌더링 중 무조건 `window`를 사용할 수 있는 것은 아니다.
+파일 맨 위에 `'use client'`를 붙인다. window 같은 브라우저 API는 이벤트나 Effect 안에서 사용한다.
 
 #### 4.2 Server Component를 사용하는 경우
 
@@ -825,14 +825,16 @@ finally { Remove-Item Env:ANALYZE }
 - 클라이언트로 보내는 JavaScript 양을 줄일 때
 - 초기 콘텐츠를 준비하고 점진적으로 스트리밍할 때
 
-`page`와 `layout`은 기본적으로 Server Component다. 서버에서 준비한 데이터 중 화면에 필요한 값만 클라이언트 컴포넌트에 전달한다. 서버에서 사용한 비밀 값을 props나 HTML에 넣으면 노출되므로 포함하지 않는다.
+`page`와 `layout`은 기본적으로 Server Component다. 화면에 필요한 값만 props로 넘기고, API key나 token은 넘기지 않는다.
 
 ---
 
-
 ### 5. Native History API
 
-`window.history.pushState`는 브라우저 기록을 추가하고, `replaceState`는 현재 기록을 바꾼다. Next.js App Router에서 URL 상태를 갱신할 때 사용할 수 있으며 `usePathname`·`useSearchParams`와 연결된다.
+- `pushState`: 브라우저 기록 추가
+- `replaceState`: 현재 기록 변경
+
+URL을 바꾸면 `usePathname`, `useSearchParams`에도 반영된다.
 
 ```tsx
 'use client';
@@ -850,7 +852,7 @@ export default function SortButton() {
 }
 ```
 
-이 방식은 전체 문서를 새로 요청하는 이동과 다르다. 서버에서 데이터를 다시 조회해야 하는 화면 전환에는 Link나 router의 이동 기능이 적절한지 함께 확인한다.
+History API로 URL을 바꾸는 것만으로 서버 데이터를 다시 조회하지는 않는다. 페이지 이동이 필요할 때는 Link나 router를 사용한다.
 
 ### 6. params 구조 분해와 타입 표기
 
@@ -865,7 +867,11 @@ export default async function BlogPostPage({
 }
 ```
 
-첫 번째 `{ params }`는 전달받은 객체에서 값을 꺼내는 구조 분해다. 콜론 뒤 `{ params: Promise<{ slug: string }> }`는 그 매개변수의 TypeScript 타입이다. 바깥 Promise는 비동기로 받을 객체를, 안쪽 `slug: string`은 그 객체 속성의 타입을 나타낸다.
+- `{ params }`: props에서 params를 꺼내는 구조 분해
+- 콜론 뒤의 객체: 매개변수 타입
+- `Promise<{ slug: string }>`: 기다린 뒤 받을 값이 slug라는 문자열을 가진 객체라는 뜻
+
+따라서 `await params`로 받은 객체에서 slug를 꺼낸다.
 
 ---
 
@@ -873,7 +879,7 @@ export default async function BlogPostPage({
 
 ### 1. How Navigation Works
 
-Next.js의 네비게이션은 다음 네 가지 기능이 함께 동작하는 구조다.
+Next.js의 페이지 이동에는 다음 네 가지가 함께 사용된다.
 
 - Server Rendering
 - Prefetching
@@ -884,24 +890,24 @@ Next.js의 네비게이션은 다음 네 가지 기능이 함께 동작하는 �
 
 #### 1.1 Server Rendering
 
-App Router의 `layout`과 `page`는 기본적으로 React Server Component다. 서버에서 만든 RSC Payload를 클라이언트에 전달하며, 화면을 준비하는 시점에 따라 렌더링 방식을 구분한다.
+App Router의 layout과 page는 기본적으로 Server Component다. 렌더링 결과를 언제 준비하는지에 따라 정적·동적으로 나눈다.
 
 - **Static Rendering**: 빌드 또는 재검증 과정에서 결과를 준비해 캐시한다.
 - **Dynamic Rendering**: 요청이 들어오면 해당 요청에 맞춰 결과를 만든다.
 
-서버에서 화면을 준비하는 동안 새 경로의 표시가 늦어질 수 있다. Next.js는 프리페칭과 클라이언트 측 전환을 함께 사용해 이 대기를 줄인다.
+요청 후에 화면을 만들면 응답을 기다려야 한다. 프리페칭과 클라이언트 측 전환으로 이 대기를 줄인다.
 
 ##### Initial Visit
 
-CSR만 사용하는 앱에서는 브라우저가 JavaScript를 실행한 뒤 본문을 구성한다. Next.js는 첫 방문에 HTML도 제공하므로 JavaScript가 모두 실행되기 전부터 내용을 표시할 수 있다.
+CSR 앱은 브라우저에서 JS를 실행한 뒤 본문을 만든다. Next.js는 첫 방문에 HTML도 보내므로 JS가 전부 실행되기 전부터 내용을 볼 수 있다.
 
-이후 hydration을 통해 클라이언트 컴포넌트의 상호작용이 연결된다. 초기 콘텐츠 표시와 검색 엔진의 내용 확인에 도움이 된다.
+이후 hydration으로 버튼 클릭 같은 상호작용을 연결한다.
 
 ---
 
 #### 1.2 Prefetching
 
-사용자가 이동할 가능성이 있는 경로를 미리 가져오는 작업이다. 링크를 누를 때 필요한 결과가 준비되어 있으면 더 빠르게 페이지를 전환할 수 있다.
+이동할 페이지를 미리 가져오는 것. 링크를 눌렀을 때 이미 결과가 있으면 빠르게 전환할 수 있다.
 
 ```tsx
 import Link from "next/link";
@@ -921,15 +927,15 @@ export default function Navigation() {
 - 정적 경로는 전체 경로를 미리 가져올 수 있다.
 - 동적 경로는 프리페칭을 생략하거나 `loading.tsx`가 있으면 일부를 가져올 수 있다.
 
-방문하지 않을 동적 경로까지 모두 처리하지 않도록 서버 작업량을 줄이는 방식이다. 자동 프리페칭은 프로덕션 환경에서 확인한다.
+자동 프리페칭은 프로덕션 환경에서 확인한다.
 
 ---
 
 #### 1.3 Streaming
 
-스트리밍은 전체 작업이 끝날 때까지 기다리지 않고 먼저 준비된 UI를 보내는 방식이다. 일부 데이터가 늦게 준비되어도 공통 화면이나 로딩 UI를 먼저 사용할 수 있다.
+전체 작업이 끝나기를 기다리지 않고 준비된 UI부터 보내는 방식이다. 데이터 조회가 늦어도 레이아웃이나 로딩 화면을 먼저 보여줄 수 있다.
 
-동적 경로에서 먼저 전달할 수 있는 요소는 다음과 같다.
+먼저 보여줄 수 있는 UI:
 
 - 공유 레이아웃
 - 로딩 안내
@@ -943,14 +949,14 @@ export default function Loading() {
 }
 ```
 
-라우트 폴더에 `loading.tsx`를 만들면 Next.js가 페이지와 그 아래의 콘텐츠를 Suspense 경계로 처리한다. 준비가 끝나면 로딩 UI를 실제 내용으로 교체한다. 화면 일부에만 적용하려면 직접 `<Suspense>`를 사용할 수도 있다.
+`loading.tsx`를 만들면 페이지와 그 아래 콘텐츠가 Suspense 경계로 처리된다. 내용이 준비되면 로딩 화면이 교체된다. 일부만 감싸려면 `<Suspense>`를 직접 사용한다.
 
 ##### Shared Layouts / Interruptible Navigation
 
 - 새 페이지가 준비되는 동안 공유 레이아웃을 유지한다.
 - 메뉴나 사이드바 등 공유 UI를 계속 사용할 수 있다.
 - 로딩이 끝나기 전 다른 경로로 이동할 수 있다.
-- 이동을 바꾸는 것과 서버에서 이미 시작한 모든 작업을 취소하는 것은 구분한다.
+- 다른 경로로 이동해도 서버에서 시작한 작업이 모두 취소되는 것은 아님
 
 ##### 웹 성능 지표
 
@@ -963,19 +969,19 @@ export default function Loading() {
 | CLS | 예상치 못한 레이아웃 이동 정도 |
 | INP | 사용자 입력에 화면이 반응하는 지연 |
 
-수업 자료에 등장하는 FID는 첫 입력의 응답 지연을 측정한 지표다. 현재 Core Web Vitals에서는 FID 대신 INP를 사용하며, LCP·INP·CLS를 함께 본다.
+FID는 첫 입력의 지연을 보던 지표다. Core Web Vitals에서는 FID 대신 INP를 사용하며 LCP·INP·CLS를 함께 본다.
 
 ---
 
 #### 1.4 Client-side Transition
 
-일반적인 문서 이동에서는 페이지 전체를 새로 불러오므로 기존 화면의 상태가 초기화될 수 있다. Next.js의 `Link`는 공유 UI를 유지하고 바뀐 경로에 필요한 화면을 갱신한다.
+일반 a 태그로 이동하면 문서 전체를 다시 받는다. Link는 공유 UI를 유지하면서 이동한 경로에 필요한 화면을 갱신한다.
 
 - 공유 레이아웃과 메뉴 유지
 - 미리 받아 둔 페이지 또는 로딩 UI 표시
 - 준비된 콘텐츠로 화면 교체
 
-서버 렌더링을 사용하면서도 SPA와 같은 자연스러운 이동 경험을 제공할 수 있다. 다만 모든 페이지의 상태나 스크롤을 항상 보존한다는 뜻은 아니다.
+레이아웃은 유지되지만 모든 페이지의 상태와 스크롤이 항상 보존되는 것은 아니다.
 
 ---
 
@@ -983,13 +989,11 @@ export default function Loading() {
 
 #### 2.1 loading.tsx가 없는 동적 경로
 
-요청 시점에 렌더링하는 경로는 서버 응답이 도착하기 전까지 변화가 없어 보일 수 있다. `loading.tsx`를 추가하면 로딩 상태를 먼저 표시하고 부분 프리페칭을 활용할 수 있다.
-
-공유 레이아웃을 유지하면서 준비 중임을 알려 주는 것이 핵심이다.
+동적 경로는 서버 응답을 기다리는 동안 화면이 멈춘 것처럼 보일 수 있다. loading.tsx를 두면 로딩 상태를 먼저 보여줄 수 있다.
 
 #### 2.2 generateStaticParams가 없는 동적 세그먼트
 
-블로그 글처럼 주소 값을 미리 알 수 있는 데이터는 `generateStaticParams`로 빌드할 경로를 지정한다.
+블로그처럼 미리 알 수 있는 slug는 `generateStaticParams`에 반환한다.
 
 ```tsx
 import { posts } from "../posts";
@@ -1008,7 +1012,7 @@ export default async function Page({
 }
 ```
 
-반환값은 slug 문자열 배열이 아니라 `{ slug: 값 }` 형태의 객체 배열이다. 동적 세그먼트라도 사전 생성할 수 있으며, 요청 정보가 필요한 경우에는 사용하는 API와 설정에 따라 동적 렌더링한다.
+반환값은 문자열 배열이 아니라 `{ slug: 값 }` 형태의 객체 배열이다. 동적 세그먼트도 이렇게 사전 생성할 수 있다.
 
 ---
 
@@ -1025,7 +1029,7 @@ export default async function Page({
 | 페이지 예시 | `pages/about.tsx` | `app/about/page.tsx` |
 | 주요 기능 | `getStaticProps` 등 | 중첩 레이아웃, 서버 컴포넌트, 로딩·에러 UI, 병렬 라우트 |
 
-수업은 App Router를 기준으로 진행한다. 기존 Pages Router 프로젝트는 해당 방식의 문서와 API를 구분해서 읽는다.
+수업은 App Router 기준. Pages Router의 API와 섞어서 사용하지 않도록 주의한다.
 
 ---
 
@@ -1033,7 +1037,7 @@ export default async function Page({
 
 ### 1. Link Component
 
-`Link`는 HTML 링크를 확장해 페이지 전환과 프리페칭을 제공한다. `next/link`에서 가져오며 `href`로 이동할 위치를 지정한다.
+`next/link`에서 Link를 가져오고 href에 이동할 주소를 넣는다. 페이지 전환과 프리페칭을 지원한다.
 
 ```tsx
 import Link from "next/link";
@@ -1045,7 +1049,7 @@ export default function Page() {
 
 #### 1.1 href
 
-문자열 경로뿐 아니라 경로와 쿼리를 분리한 객체도 전달할 수 있다.
+href에 문자열 대신 pathname과 query를 가진 객체를 넣을 수도 있다.
 
 ```tsx
 <Link href="/products?id=1&name=keyboard">상품</Link>
@@ -1059,7 +1063,7 @@ export default function Page() {
 
 ### 2. Creating a Layout
 
-루트 레이아웃은 전체 화면을 감싸며 `html`, `body`를 포함한다. `children`에는 해당 경로의 페이지나 중첩 레이아웃이 들어간다.
+Root Layout은 전체 화면을 감싼다. html과 body가 들어가며, children 자리에 페이지나 하위 레이아웃이 들어온다.
 
 ```tsx
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -1075,13 +1079,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-하위 경로의 레이아웃은 필요할 때 추가한다. 루트에 쓰는 `RootLayout`이라는 함수 이름 자체가 필수 규칙인 것은 아니다.
+하위 경로에도 layout을 추가할 수 있다. 함수 이름이 꼭 RootLayout일 필요는 없고, 파일 이름이 layout.tsx여야 한다.
 
 ---
 
 ### 3. Creating a Nested Route
 
-중첩 라우트는 여러 URL 구간으로 구성된 경로다. 폴더를 중첩해 주소 구조를 만들고 `page.tsx`로 해당 위치의 화면을 정의한다.
+폴더를 중첩하면 URL도 중첩된다. 각 위치에 page.tsx를 만들어 화면을 작성한다.
 
 ```text
 app/
@@ -1097,9 +1101,9 @@ app/
 
 `blog/layout.tsx`는 목록 페이지와 글 상세 페이지를 함께 감싼다.
 
-#### 3.1 문서의 예제를 복사했을 때 발생하는 오류
+#### 3.1 예제 import 오류
 
-공식 문서의 `@/lib/posts`, `@/ui/post`는 예제에서 가정한 파일이다. 실제 프로젝트에 없다면 import 오류가 난다. 우선 정적인 목록을 작성하거나 필요한 데이터와 컴포넌트 파일을 만들어야 한다.
+공식 문서에 있는 `@/lib/posts`, `@/ui/post`는 직접 만들어야 하는 파일이다. 그대로 import하면 파일이 없어서 오류가 난다. 우선 정적인 목록으로 작성하거나 해당 파일을 만든다.
 
 ```tsx
 export default function BlogPage() {
@@ -1117,13 +1121,13 @@ export default function BlogPage() {
 
 ### 4. Dynamic Segments와 slug
 
-폴더 이름을 `[slug]`처럼 대괄호로 감싸면 URL에서 해당 위치의 값을 전달받는다. slug는 페이지를 식별하기 위한 읽기 쉬운 문자열이다.
+폴더 이름을 `[slug]`로 만들면 URL의 값을 params로 받는다. slug는 글을 구분하는 읽기 쉬운 문자열이다.
 
 - `/blog/nextjs` → `params.slug`는 `nextjs`
 - `/blog/routing` → `params.slug`는 `routing`
 - `[id]`로 만들었다면 `params.id`로 접근
 
-동적 폴더명은 params의 키를 결정한다. 데이터의 필드 이름은 조회 코드에서 연결할 수 있다.
+폴더 이름을 `[id]`로 지으면 params의 키도 id가 된다.
 
 #### 4.1 게시글 데이터와 상세 페이지
 
@@ -1160,20 +1164,20 @@ export default async function BlogPostPage({
 
 #### 4.2 params와 async / await
 
-Next.js 15부터 params가 Promise로 제공된다. 바로 `params.slug`를 읽으면 버전에 따라 비동기 접근 관련 오류가 발생하므로 `await params`로 값을 얻는다.
+Next.js 15부터 params는 Promise다. `params.slug`를 바로 읽지 않고 `await params`로 먼저 값을 받는다.
 
 - `async`: 함수 안에서 await를 사용하도록 선언한다.
 - `{ params }`: props 중 params만 구조 분해해 받는다.
 - `Promise<{ slug: string }>`: 비동기 결과의 형태를 지정한다.
 - `.find()`: 배열에서 slug와 일치하는 항목을 찾는다.
 
-`.find()`는 데이터 수에 비례해 탐색하는 O(n) 방식이다. 작은 더미 데이터에서는 간단하며, 데이터가 커지면 DB 조회 등으로 필요한 항목을 가져오는 방법을 검토한다.
+find는 배열을 차례로 탐색하므로 O(n)이다. 더미 데이터에서는 그대로 쓰고, 데이터가 많아지면 DB에서 필요한 글을 조회하는 방식으로 바꿀 수 있다.
 
 ---
 
 ### 5. Rendering with Search Params
 
-쿼리 문자열은 `?` 뒤에 오는 검색 조건이다. 필터링이나 페이지 번호처럼 같은 경로에서 다른 결과를 보여줄 때 사용한다.
+`?` 뒤의 쿼리 문자열. 검색어, 필터, 페이지 번호처럼 같은 경로에서 조건을 바꿀 때 사용한다.
 
 ```text
 /products?id=1&name=keyboard
@@ -1203,11 +1207,11 @@ export default async function ProductsPage({
 | `useSearchParams` | 클라이언트 컴포넌트에서 쿼리를 읽을 때 |
 | `new URLSearchParams(window.location.search)` | 브라우저 이벤트나 콜백에서 현재 값을 읽을 때 |
 
-`params`는 경로의 동적 구간, `searchParams`는 쿼리 문자열을 읽는다. 서버 페이지의 searchParams는 일반 객체이며, 요청에 따라 달라지므로 이를 읽는 부분은 요청 시점의 처리가 필요하다.
+params는 URL 경로의 값, searchParams는 쿼리 문자열이다. 서버 페이지에서는 searchParams를 await하면 일반 객체를 받는다. 요청마다 값이 달라질 수 있다.
 
 ### 6. Route 방식
 
-React에서는 라우터 라이브러리 등으로 경로를 구성하고, Next.js에서는 파일 기반 라우팅을 사용한다. App Router는 중첩 레이아웃과 서버 컴포넌트, 구간별 로딩·에러 UI를 함께 구성할 수 있다. 이 비교는 다음 주차의 네비게이션 동작으로 이어진다.
+React에서는 라우터 라이브러리 등으로 경로를 직접 연결한다. Next.js는 폴더와 파일로 경로를 만든다. App Router에서는 경로별 layout, loading, error도 함께 작성한다.
 
 ---
 
@@ -1221,11 +1225,11 @@ React에서는 라우터 라이브러리 등으로 경로를 구성하고, Next.
 - `_folder`: 해당 폴더와 하위 폴더를 라우팅에서 제외한다.
 - 일반 폴더도 page나 route 파일이 없으면 그 자체로 공개 경로를 만들지 않는다.
 
-`app/(marketing)/about/page.tsx`의 주소는 `/about`이다. 그룹 이름이 빠지기 때문에 다른 위치에 같은 `/about` 경로를 중복해서 만들지 않도록 주의한다.
+`app/(marketing)/about/page.tsx`는 `/about`으로 연결된다. 그룹 이름은 URL에 안 들어가므로 다른 폴더와 주소가 겹치지 않게 주의한다.
 
 #### 1.2 Parallel / Intercepting Routes
 
-여러 슬롯을 가진 화면이나 목록 위에 상세 모달을 여는 UI에 활용한다.
+여러 화면을 한 레이아웃에 보여주거나, 목록 위에 상세 모달을 띄울 때 사용한다.
 
 | 표기 | 의미 |
 | --- | --- |
@@ -1235,13 +1239,13 @@ React에서는 라우터 라이브러리 등으로 경로를 구성하고, Next.
 | `(..)(..)folder` | 두 단계 위의 경로 가로채기 |
 | `(...)folder` | app 루트 기준 경로 가로채기 |
 
-가로채기 라우트는 현재 화면의 맥락 안에서 다른 경로의 내용을 표시하는 데 사용한다.
+가로채기 라우트는 현재 화면을 유지하면서 다른 경로의 내용을 보여줄 때 쓴다.
 
 ---
 
 ### 2. Open Graph Protocol
 
-링크 공유 시 미리보기 제목·설명·이미지 등을 전달하는 규칙이다. Facebook에서 시작해 여러 SNS와 메신저에서 사용하지만 플랫폼마다 표시 방식은 다를 수 있다.
+링크를 공유했을 때 나오는 제목, 설명, 미리보기 이미지를 지정하는 규칙이다. Facebook에서 시작됐고 여러 SNS와 메신저에서 사용한다.
 
 ```html
 <meta property="og:title" content="Next.js 수업 정리" />
@@ -1259,15 +1263,15 @@ React에서는 라우터 라이브러리 등으로 경로를 구성하고, Next.
 
 ### 3. Organizing Your Project
 
-UI 로직과 라우팅 로직을 구분하고, 관련 파일을 일관된 기준으로 배치한다. 라우팅 규칙을 지키면서 컴포넌트나 데이터 파일은 app 안팎으로 구성할 수 있다.
+라우팅 파일과 컴포넌트, 데이터 파일의 위치를 정리한다. 라우팅 규칙을 지키면 관련 파일을 app 안에 같이 두어도 된다.
 
 #### 3.1 Colocation
 
-함께 사용하는 파일을 같은 기능 폴더 가까이에 두는 방식이다. 예를 들어 블로그 페이지와 게시글 데이터를 같은 폴더에 두면 관련 내용을 찾기 쉽다.
+함께 쓰는 파일을 가까이 두는 것. 블로그 페이지와 posts 데이터를 같은 폴더에 두는 식이다.
 
 #### 3.2 Component Hierarchy
 
-수업에서 다룬 특수 파일의 기본 계층은 다음과 같다.
+특수 파일이 화면을 감싸는 순서:
 
 ```text
 layout
@@ -1278,7 +1282,7 @@ layout
             └─ page 또는 하위 layout
 ```
 
-각 경계는 해당 상태일 때 대체 UI를 표시한다. 중첩 라우트에도 같은 구조가 반복되므로 부모의 공통 UI 안에서 하위 페이지의 로딩과 오류를 나누어 처리할 수 있다.
+중첩 경로에도 이 구조가 반복된다. 부모 화면을 유지하면서 하위 페이지의 로딩과 오류를 처리할 수 있다.
 
 #### 3.3 Layout vs Template
 
@@ -1288,17 +1292,20 @@ layout
 | 클라이언트 상태 | 유지 가능 | 재마운트되는 부분은 초기화 |
 | 사용 예 | 헤더, 메뉴, 사이드바 | 진입마다 초기화가 필요한 UI |
 
-정적·동적 페이지 여부보다 인스턴스와 상태를 유지할지에 따라 구분한다.
+화면이 정적인지보다, 이동할 때 기존 상태를 유지할지가 차이점이다.
 
 #### 3.4 src Directory
 
-`src`는 애플리케이션 소스를 설정 파일과 분리하기 위한 선택적 폴더다. `app`을 루트에 둘 수도 있고 `src/app`으로 구성할 수도 있다.
+소스 파일을 따로 모으고 싶으면 src를 사용한다. app을 루트에 두거나 src/app으로 둘 수 있다.
 
 ---
 
 ### 4. Creating Pages and Nested Layouts
 
-`page.tsx`는 해당 경로의 화면, `layout.tsx`는 하위 화면의 공통 틀이다. layout의 `children` 자리에 페이지 또는 더 안쪽 레이아웃이 들어간다.
+- `page.tsx`: 해당 주소의 화면
+- `layout.tsx`: 하위 화면들이 공유하는 틀
+
+layout의 children 안에 페이지나 더 안쪽 레이아웃이 들어간다.
 
 ```text
 src/app/
@@ -1311,7 +1318,7 @@ src/app/
       └─ page.tsx
 ```
 
-`/about`의 화면은 Root Layout → Marketing Layout → About Layout → About Page 순서로 감싸진다. 루트만 `html`, `body`를 포함하고 하위 레이아웃은 필요한 공통 UI를 작성한다.
+/about은 Root → Marketing → About Layout → About Page 순서로 감싸진다. html과 body는 루트 레이아웃에만 넣는다.
 
 ```tsx
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -1329,7 +1336,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
 ### 5. Loading Skeleton 실습
 
-특정 경로에 `loading.tsx`를 만들고 페이지에 3초 지연을 넣어 로딩 UI를 관찰하는 예제다.
+페이지에 3초 지연을 넣고 loading.tsx가 나타나는지 확인하는 예제.
 
 ```tsx
 // loading.tsx
@@ -1346,7 +1353,7 @@ export default async function BlogPage() {
 }
 ```
 
-`await`는 Promise가 완료된 결과를 기다린다. 위 코드는 지연을 관찰하기 위한 수업 예제이며, 사전 렌더링·캐시 여부에 따라 매 방문마다 지연이 생기는 것은 아니다.
+await는 Promise가 끝날 때까지 기다린다. 페이지가 미리 렌더링되거나 캐시되어 있으면 매번 3초씩 기다리지는 않는다.
 
 ---
 
@@ -1354,7 +1361,7 @@ export default async function BlogPage() {
 
 ### 1. Manual Installation
 
-프로젝트에 필요한 패키지와 파일을 직접 만들면서 기본 구성을 확인한다.
+패키지와 기본 파일을 직접 만들어서 설치하는 방법.
 
 ```bash
 mkdir foo
@@ -1389,7 +1396,7 @@ export default function Page() {
 }
 ```
 
-`/`에 접속하면 루트 레이아웃 안에 page의 내용이 들어간다. 두 파일을 `src/app`에 구성할 수도 있다.
+/에 접속하면 layout 안에 page가 들어간다. src/app 구조로 만들어도 같다.
 
 #### 1.2 scripts와 개발 서버
 
@@ -1407,9 +1414,11 @@ export default function Page() {
 pnpm dev
 ```
 
-`dev` 명령을 찾을 수 없다는 오류가 나면 package.json의 scripts를 확인한다. JSX 타입 오류가 나면 React 타입 패키지와 TypeScript 구성을 확인한다. Next.js는 TypeScript 파일을 감지해 필요한 설정을 안내하거나 생성한다.
+- dev 명령을 찾지 못하면 package.json의 scripts 확인
+- JSX 타입 오류가 나면 React 타입 패키지와 tsconfig 확인
+- TypeScript 파일이 있으면 Next.js가 필요한 설정을 안내하거나 생성함
 
-자료의 예전 `next lint` 명령은 버전 차이에 주의한다. Next.js 16에서는 별도로 설정한 ESLint 명령을 사용한다.
+Next.js 16에서는 next lint 대신 ESLint 명령을 사용한다.
 
 ---
 
@@ -1419,13 +1428,13 @@ pnpm dev
 pnpm create next-app@latest my-app
 ```
 
-TypeScript, ESLint, Tailwind CSS, src 폴더, App Router, import 별칭 등을 선택해 기본 프로젝트를 생성한다.
+TypeScript, ESLint, Tailwind CSS, src 폴더, App Router, import 별칭 등을 선택한다.
 
 ```bash
 pnpm create next-app@latest my-app --yes
 ```
 
-`--yes`를 사용하면 기본값이나 저장된 설정을 이용해 질문을 건너뛴다.
+`--yes`를 붙이면 기본값이나 저장된 설정으로 질문을 건너뛴다.
 
 ---
 
@@ -1440,7 +1449,7 @@ pnpm create next-app@latest my-app --yes
 | `public` | 이미지·폰트 등 정적 리소스 |
 | `src` | 애플리케이션 소스를 구분하는 선택적 폴더 |
 
-`public/profile.png`는 `/profile.png`로 접근한다. `next/image`를 사용하면 이미지 크기 정보와 대체 텍스트를 함께 작성할 수 있다.
+`public/profile.png`의 주소는 `/profile.png`다. next/image를 쓸 때는 크기와 alt도 작성한다.
 
 #### 3.2 Top-level Files
 
@@ -1456,7 +1465,7 @@ pnpm create next-app@latest my-app --yes
 | `tsconfig.json` / `jsconfig.json` | 타입 및 모듈 경로 설정 |
 | `eslint.config.mjs` | ESLint flat config |
 
-이 파일이 프로젝트 생성 시 모두 만들어지는 것은 아니다.
+필요한 기능에 따라 만드는 파일이므로 처음부터 전부 있을 필요는 없다.
 
 #### 3.3 Routing Files
 
@@ -1472,7 +1481,7 @@ pnpm create next-app@latest my-app --yes
 | `template` | 새 인스턴스로 감싸는 UI |
 | `default` | 병렬 라우트 슬롯의 기본 UI |
 
-UI 파일에는 `.js`, `.jsx`, `.tsx`, 요청 처리 파일에는 `.js`, `.ts` 등을 사용한다. 폴더의 중첩이 URL 구간의 중첩으로 이어진다.
+UI 파일은 js·jsx·tsx, 요청 처리 파일은 js·ts 등을 사용한다. 폴더를 중첩하면 URL의 구간도 늘어난다.
 
 ---
 
@@ -1484,7 +1493,7 @@ UI 파일에는 `.js`, `.jsx`, `.tsx`, 요청 처리 파일에는 `.js`, `.ts` �
 | `[...slug]` | 하나 이상의 구간 | `["abc", "def"]` |
 | `[[...slug]]` | 구간이 없는 경우도 포함 | `undefined` 또는 배열 |
 
-`/posts/[slug]`는 `/posts/abc`를 처리하지만 `/posts`나 `/posts/abc/def`까지 처리하지 않는다. 허용할 경로 깊이와 기본 경로 포함 여부에 따라 표기를 선택한다.
+`/posts/[slug]`는 `/posts/abc`만 받는다. `/posts`나 `/posts/abc/def`까지 받으려면 다른 표기가 필요하다.
 
 ---
 
@@ -1492,7 +1501,8 @@ UI 파일에는 `.js`, `.jsx`, `.tsx`, 요청 처리 파일에는 `.js`, `.ts` �
 
 #### 5.1 ESLint 설정 파일
 
-`.eslintrc.json`은 JSON 설정, `eslint.config.mjs`는 JavaScript 모듈 형태의 flat config다. mjs에서는 import, 변수, 조건문 등을 이용한 설정 구성이 가능하다.
+- `.eslintrc.json`: 기존 JSON 설정
+- `eslint.config.mjs`: JavaScript 모듈 형태의 flat config. import나 변수를 사용할 수 있음
 
 #### 5.2 Path Aliases
 
@@ -1509,7 +1519,7 @@ UI 파일에는 `.js`, `.jsx`, `.tsx`, 요청 처리 파일에는 `.js`, `.ts` �
 }
 ```
 
-자료의 `baseUrl`과 버전별 경고 설정을 그대로 섞기보다 실제 TypeScript 버전을 확인한다. 위처럼 경로를 직접 지정할 수 있다.
+paths에 상대 경로를 직접 지정할 수 있다. baseUrl 관련 경고는 사용 중인 TypeScript 버전도 확인한다.
 
 #### 5.3 VS Code 편집기 레이블
 
@@ -1528,9 +1538,9 @@ UI 파일에는 `.js`, `.jsx`, `.tsx`, 요청 처리 파일에는 `.js`, `.ts` �
 
 ### 6. pnpm과 링크 구조 복습
 
-pnpm은 공용 패키지 저장소의 파일을 재사용해 중복 저장을 줄인다. pnpm 설치 상태는 `pnpm-lock.yaml`에 기록한다.
+pnpm은 공용 저장소의 패키지 파일을 재사용해 중복 저장을 줄인다. 설치 정보는 pnpm-lock.yaml에 기록한다.
 
-하드 링크는 같은 데이터를 가리키는 이름을 추가하는 방식이고, 심볼릭 링크는 대상 경로를 가리킨다. 같은 프로젝트에서 패키지 관리자를 바꿀 때는 잠금 파일과 설치 상태를 함께 확인한다.
+하드 링크는 같은 파일 데이터를, 심볼릭 링크는 대상 경로를 가리킨다. 패키지 관리자를 바꾸면 lock 파일과 설치 상태도 확인해야 한다.
 
 ---
 
@@ -1538,7 +1548,7 @@ pnpm은 공용 패키지 저장소의 파일을 재사용해 중복 저장을 �
 
 ### 1. Next.js
 
-Next.js는 React를 기반으로 웹 애플리케이션을 구성하는 프레임워크다. UI뿐 아니라 라우팅, 서버 렌더링, 번들러·컴파일러 설정 등의 기능을 함께 제공한다. React 위에서 앱 구성 기능을 제공한다는 의미에서 메타 프레임워크라고도 설명한다.
+React 기반 프레임워크. 라우팅, 서버 렌더링, 빌드 설정 등을 제공한다. React 위에서 앱에 필요한 기능을 더해 주기 때문에 메타 프레임워크라고도 부른다.
 
 ### 2. Getting Started
 
@@ -1548,18 +1558,18 @@ Next.js는 React를 기반으로 웹 애플리케이션을 구성하는 프레�
 | Guides | 특정 사용 사례와 구현 방법 확인 |
 | API Reference | 개별 기능의 인자·옵션·동작 확인 |
 
-HTML, CSS, JavaScript와 React의 컴포넌트·props·state를 먼저 이해하면 예제를 따라가기 쉽다. 기초를 익힌 뒤에는 공식 Learn 과정으로 실습할 수 있다.
+HTML, CSS, JavaScript와 React의 props·state가 기본이다. 공식 Learn 과정에서도 예제를 따라 해 볼 수 있다.
 
 ### 3. App Router / Pages Router
 
 - **App Router**: app 디렉터리와 서버 컴포넌트, 중첩 레이아웃 등의 기능을 사용한다.
 - **Pages Router**: pages 디렉터리를 사용하는 기존 라우터이며 계속 지원된다.
-- 문서에서 라우터와 버전을 선택해 사용하는 프로젝트에 맞는 예제를 읽는다.
+- 문서를 볼 때 App Router / Pages Router와 버전을 먼저 확인한다.
 - `page`는 경로의 화면, `layout`은 공유 구조를 담당한다.
 
 ### 4. Server / Client Components
 
-서버 컴포넌트는 서버에서 처리하고, 상태·이벤트·브라우저 기능이 필요한 부분에는 클라이언트 컴포넌트를 사용한다. `'use client'`는 클라이언트 컴포넌트의 진입 경계를 선언한다.
+데이터 조회와 서버 처리는 Server Component에 둔다. 상태, 이벤트, 브라우저 API가 필요하면 `'use client'`로 Client Component를 만든다.
 
 ```tsx
 "use client";
@@ -1572,17 +1582,17 @@ export default function Counter() {
 }
 ```
 
-React 자체에도 서버 렌더링 기능이 있으므로 React는 항상 CSR만 가능하다고 구분하지 않는다.
+React 자체에서도 서버 렌더링은 가능하다. React = CSR로만 외우지 않기.
 
 ### 5. Accessibility
 
-접근성은 다양한 사용자가 콘텐츠와 기능을 이용할 수 있게 만드는 것이다. 수업 자료에서는 화면 판독기 사용 조합으로 Firefox·NVDA, Safari·VoiceOver를 소개한다.
+화면 낭독기나 키보드로도 내용을 읽고 기능을 사용할 수 있어야 한다. 수업에서 소개한 조합은 Firefox + NVDA, Safari + VoiceOver.
 
-화면을 시각적으로 보는 상황만 가정하지 않고 문서 구조, 이미지 대체 텍스트, 키보드 조작도 고려한다.
+문서의 제목 구조, 이미지 alt, 키보드로 버튼에 접근할 수 있는지도 확인한다.
 
 ### 6. pnpm
 
-Performant NPM이라는 이름의 패키지 관리자로, 저장 공간과 설치 속도·의존성 관리를 개선하는 데 초점을 둔다.
+Performant NPM. 패키지 파일을 재사용해 설치 공간을 줄이는 패키지 관리자다.
 
 - 이미 받은 패키지 파일 재사용
 - 중복 저장을 줄여 디스크 공간 절약
@@ -1591,17 +1601,17 @@ Performant NPM이라는 이름의 패키지 관리자로, 저장 공간과 설�
 
 #### 6.1 Hard Link
 
-Unix 계열 파일 시스템을 설명할 때 파일을 다음 요소로 나눌 수 있다.
+Unix 계열 파일 시스템에서 구분하는 요소:
 
 - **Directory Entry**: 파일 이름과 inode를 연결한다.
 - **inode**: 권한, 소유자, 크기, 데이터 위치 등의 정보를 가진다.
 - **Data Blocks**: 실제 데이터를 저장한다.
 
-하드 링크는 같은 inode에 대한 다른 이름이다. 한 이름을 지워도 다른 링크가 남아 있으면 데이터를 사용할 수 있다.
+같은 inode를 가리키는 이름을 하나 더 만드는 것. 한쪽 이름을 지워도 다른 링크가 남아 있으면 파일 데이터는 남는다.
 
 #### 6.2 Symbolic Link
 
-심볼릭 링크는 별도의 링크 파일에 대상 경로를 기록한다. 대상이 이동하거나 삭제되면 연결이 끊어질 수 있다. 하드 링크처럼 같은 inode를 공유하는 방식과 구분한다.
+대상 파일의 경로를 가리키는 링크다. 대상이 이동하거나 삭제되면 연결이 끊어질 수 있다.
 
 ### 7. 내장 최적화와 배포
 
@@ -1616,10 +1626,10 @@ Unix 계열 파일 시스템을 설명할 때 파일을 다음 요소로 나눌 
 pnpm create next-app@latest my-app
 ```
 
-`--yes`를 붙이면 기본값이나 저장된 설정으로 질문을 건너뛴다. 지원 브라우저와 필요한 폴리필도 설치 문서에서 확인한다.
+`--yes`를 붙이면 기본값이나 저장된 설정으로 설치한다. 필요한 브라우저 지원 범위와 폴리필은 설치 문서에서 확인한다.
 
 ---
 
 참고한 저장소: [wpexq](https://github.com/wpexq/React2), [wlswodnjs](https://github.com/wlswodnjs/react-02), [jinwooorp](https://github.com/jinwooorp/React2), [gkfg](https://github.com/gkfg/Daelim-React2), [onejae17](https://github.com/onejae17/React2), [imdohyeon](https://github.com/imdohyeon/React2), [umteahoon](https://github.com/umteahoon/React2)
 
-[날짜별 원본 대조 기록](docs/SOURCES.md) · [프로젝트 실행 방법](my-next-app/README.md)
+[자료 출처](docs/SOURCES.md) · [프로젝트 실행 방법](my-next-app/README.md)
