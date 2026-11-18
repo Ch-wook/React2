@@ -1,6 +1,6 @@
 # Next.js 수업 실습
 
-[날짜별 수업 정리](../RENAMED.md) · [자료 출처](../docs/SOURCES.md) · [저장소 안내](../README.md)
+[날짜별 수업 정리](../RENAME.md) · [자료 출처](../docs/SOURCES.md) · [저장소 안내](../README.md)
 
 ## 실행
 
@@ -83,4 +83,4 @@ finally { Remove-Item Env:ANALYZE }
 
 [원본 강의 정리](../docs/lecture-materials/nov11/)를 보관하고 [통합 기록](../docs/SOURCES.md)에 변경 이유와 검증 범위를 적었습니다. 첨부 문서가 언급하는 강의 영상은 이번 작업에서 직접 확인한 자료가 아닙니다.
 
-업데이트 ZIP의 최상위에는 날짜별 `README.md`·`RENAMED.md`, `docs`, 이 `my-next-app` 폴더가 들어 있습니다. 압축을 푼 뒤 `my-next-app`에서 `npm.cmd ci`를 실행합니다. `node_modules`·`.next`·`.git`은 포함하지 않습니다.
+업데이트 ZIP의 최상위에는 날짜별 `README.md`·`RENAME.md`, `docs`, 이 `my-next-app` 폴더가 들어 있습니다. 압축을 푼 뒤 `my-next-app`에서 `npm.cmd ci`를 실행합니다. `node_modules`·`.next`·`.git`은 포함하지 않습니다.
