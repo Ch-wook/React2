@@ -1,5 +1,577 @@
 # 202130433 최현욱 수업기록
 
+## 2026-11-11 (Week 11)
+
+### 1. Context Provider 코드 읽기
+
+지난 시간에 만든 테마 기능을 `Context 생성 → Provider 배치 → Consumer 사용` 순서로 다시 살펴봤다. Context는 공유할 값의 통로이고, 실제로 바뀌는 값은 Provider 안의 state가 관리한다.
+
+#### 1.1 타입과 기본값
+
+```tsx
+type Theme = 'light' | 'dark';
+type ThemeContextValue = {
+  theme: Theme;
+  toggleTheme: () => void;
+};
+
+export const ThemeContext = createContext<ThemeContextValue>({
+  theme: 'light',
+  toggleTheme: () => {},
+});
+```
+
+- `'light' | 'dark'`: 두 문자열 중 하나만 허용하는 문자열 리터럴 유니온 타입이다. 다른 값을 넣는 실수를 타입 검사로 잡을 수 있다.
+- `toggleTheme: () => void`: 인자를 받지 않고 반환값을 사용하지 않는 함수다.
+- `createContext`의 기본값은 위쪽에 해당 Provider가 없을 때 사용하는 fallback이다. Provider가 있으면 `value`에 넣은 값이 우선한다.
+- 기본값의 빈 함수는 테마를 바꾸지 않는다. 실제 변경 함수는 `ThemeProvider`에서 만들어 전달한다.
+
+```tsx
+const [theme, setTheme] = useState<Theme>('light');
+const toggleTheme = () => {
+  setTheme((current) => current === 'dark' ? 'light' : 'dark');
+};
+```
+
+`useState`의 초기값은 `light`다. 함수형 업데이트는 직전 상태를 받아 다음 상태를 계산한다.
+
+#### 1.2 useEffect와 data-theme
+
+```tsx
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    document.documentElement.dataset.theme = theme;
+  }
+}, [theme]);
+```
+
+| 코드 | 의미 |
+| --- | --- |
+| `useEffect` | 렌더링 결과가 반영된 뒤 외부 DOM과 상태를 동기화 |
+| `typeof window !== 'undefined'` | 브라우저 객체가 있는 환경인지 확인 |
+| `document.documentElement` | 현재 문서의 `<html>` 요소 |
+| `.dataset.theme = theme` | HTML의 `data-theme` 속성을 현재 상태로 변경 |
+| `[theme]` | 최초 마운트와 theme 값이 바뀐 뒤 Effect 실행 |
+
+`theme`이 `dark`면 `<html data-theme="dark">`가 된다. `useEffect`는 서버 렌더링 중에는 실행되지 않는다. 수업의 환경 확인 조건은 브라우저 객체를 다루는 위치를 구분하기 위한 것이다.
+
+#### 1.3 CSS 속성 선택자
+
+```css
+html[data-theme='light'] {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+html[data-theme='dark'] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+```
+
+`[data-theme='dark']`는 속성값으로 요소를 선택한다. Context의 값을 바꾸는 것과 실제 화면 색상을 바꾸는 것은 별개다. `useEffect`가 HTML 속성을 바꾸고, CSS가 그 속성에 맞는 색상을 적용해야 테마 변화가 보인다. 속성 선택자를 쓴다고 모든 CSS 충돌이 자동으로 없어지는 것은 아니다.
+
+### 2. ThemeStatus와 Provider 배치
+
+```tsx
+'use client';
+
+import { useContext } from 'react';
+import { ThemeContext } from './ThemeProvider';
+
+export default function ThemeStatus() {
+  const { theme, toggleTheme } = useContext(ThemeContext);
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label="다크 모드"
+      aria-pressed={theme === 'dark'}
+    >
+      Theme: {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+    </button>
+  );
+}
+```
+
+`useContext`는 현재 컴포넌트 위에 있는 가장 가까운 `ThemeContext.Provider`의 값을 읽는다. `ThemeStatus`는 전달받은 함수를 실행하고, Provider는 상태를 변경한다. `aria-label`은 버튼 이름, `aria-pressed`는 토글 상태를 보조 기술에 전달한다.
+
+RootLayout은 Server Component로 유지하고, `<body>` 안에서 공통 화면을 감싼다.
+
+```tsx
+<html lang="ko" data-theme="light">
+  <body>
+    <ThemeProvider>
+      <header><ThemeStatus /></header>
+      <main>{children}</main>
+      <footer>수업 기록</footer>
+    </ThemeProvider>
+  </body>
+</html>
+```
+
+Provider는 값이 필요한 범위를 감싸도록 배치한다. `useEffect`가 `<html>` 속성을 바꿀 수 있다는 사실과 Context를 읽을 수 있는 범위는 다르다. Provider 밖의 컴포넌트는 이 Provider가 제공하는 값을 읽지 못한다. `children`으로 받은 서버 UI도 이 구조 때문에 모두 Client Component로 바뀌는 것은 아니다.
+
+### 3. Context Provider 동작 순서
+
+1. RootLayout이 ThemeProvider와 페이지를 구성한다.
+2. ThemeProvider가 `useState`로 theme을 만들고 `value={{ theme, toggleTheme }}`를 제공한다.
+3. ThemeStatus가 `useContext`로 현재 값과 함수를 읽는다.
+4. 사용자가 버튼을 누르면 `toggleTheme()`가 `setTheme()`을 호출한다.
+5. Provider와 해당 Context를 사용하는 Consumer가 새 값으로 렌더링된다.
+6. 변경이 반영된 뒤 Effect가 `data-theme`를 갱신한다.
+7. CSS 선택자가 새 테마의 스타일을 적용한다.
+
+```text
+버튼 클릭 → toggleTheme → setTheme
+                         ↓
+                 Provider value 변경
+                         ↓
+                 Consumer의 UI 갱신
+                         ↓
+                 useEffect → data-theme → CSS
+```
+
+Context 값의 변화는 그 값을 읽는 Consumer에게 전달된다. 모든 하위 Server Component가 브라우저에서 다시 실행된다는 뜻은 아니다.
+
+### 4. 외부(Third-party) Component
+
+외부 UI 패키지도 상태나 이벤트를 사용하면 Client Component 경계가 필요하다. 수업에서는 `acme-carousel`을 예로 들었다. 패키지에 `'use client'` 표시가 없는 경우, 내 Client Component에서 가져와 사용하거나 별도의 래퍼를 만든다.
+
+```tsx
+// 외부 패키지가 설치되어 있고 해당 export를 제공할 때의 래퍼 예시
+'use client';
+
+import { Carousel } from 'acme-carousel';
+
+export default Carousel;
+```
+
+Server Component는 이 래퍼를 import해 렌더링할 수 있다. 페이지 전체에 `'use client'`를 추가할 필요는 없다.
+
+#### 4.1 모듈 오류와 필수 props 오류
+
+| 오류 | 확인할 부분 |
+| --- | --- |
+| `Cannot find module 'acme-carousel'` | 실행하는 프로젝트의 패키지 설치, import 이름과 경로 |
+| `Property 'items' is missing` | 실제 패키지 타입에서 필수로 정한 props |
+| import한 export가 없다는 오류 | default export와 named export 구분 |
+| 동작하지만 이미지 배치가 깨짐 | 패키지 스타일 import와 CSS 경로 |
+
+모듈을 찾지 못하는 오류와 props가 빠진 오류는 서로 다르다. 설치가 끝났어도 필수 데이터를 넘기지 않으면 타입 오류가 남는다.
+
+#### 4.2 items와 조건부 렌더링
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import LocalCarousel from './LocalCarousel';
+import './styles.css';
+
+const items = [
+  { id: '1', src: 'https://picsum.photos/id/1015/800/600', alt: 'Landscape 1' },
+  { id: '2', src: 'https://picsum.photos/id/1016/800/600', alt: 'Landscape 2' },
+  { id: '3', src: 'https://picsum.photos/id/1018/800/600', alt: 'Landscape 3' },
+];
+
+export default function Gallery() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <section>
+      <button onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen}>
+        {isOpen ? '사진 닫기' : 'View pictures'}
+      </button>
+      {isOpen && <LocalCarousel items={items} />}
+    </section>
+  );
+}
+```
+
+`items`의 각 요소는 식별자 `id`, 이미지 주소 `src`, 대체 텍스트 `alt`를 갖는다. `isOpen`이 참일 때만 캐러셀을 렌더링한다. 첨부된 실습의 `LocalCarousel`은 이 데이터 전달 방식을 연습하는 로컬 구현이다. 외부 패키지 전체 기능이나 API를 복제한 것은 아니다.
+
+#### 4.3 CSS와 export 확인
+
+첨부 자료에서는 `acme-carousel/dist/styles.css`를 가져오는 과정의 오류와, 로컬 스타일 파일을 import하는 해결 과정을 정리했다. 실제 패키지를 사용할 때는 설치된 버전의 `exports`, 타입 선언, 스타일 경로를 확인한다.
+
+```tsx
+import './styles.css';
+```
+
+Named export는 중괄호를 사용하고, default export는 중괄호 없이 가져온다.
+
+```tsx
+// 패키지가 제공하는 export 형태를 먼저 확인한다.
+import { Carousel } from 'acme-carousel';
+import Slide from 'acme-carousel';
+```
+
+위 `Slide` 구문은 첨부된 강의 정리의 예시다. 모든 버전에서 동일하다고 가정하지 않는다. 캐러셀의 인덱스·자동 재생·내비게이션·페이지 표시·터치·반응형 옵션도 해당 라이브러리의 타입과 문서를 기준으로 사용한다.
+
+참고: [11주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조) · [첨부 11월 11일 정리](docs/lecture-materials/nov11/11월11일_강의_전체_정리.md)
+
+---
+
+## 2026-11-04 (Week 10)
+
+### 1. Server에서 Client로 데이터 전달
+
+Server Component에서 조회한 값을 Client Component의 props로 전달한다. 지난 시간의 글 상세 페이지가 `likes`를 넘기고, LikeButton이 이를 state의 초기값으로 사용하는 구조다.
+
+```tsx
+// Server Component 내부
+const post = posts.find((item) => item.id === id);
+if (!post) notFound();
+
+return <LikeButton key={post.id} likes={post.likes} />;
+```
+
+Client Component 경계를 넘는 값은 React가 직렬화할 수 있어야 한다. 직렬화는 메모리의 구조를 전송 가능한 표현으로 바꾸는 과정이고, 받는 쪽에서는 이를 다시 해석한다.
+
+- 문자열·숫자·불리언과 지원되는 배열·객체 등을 전달할 수 있다.
+- 일반 이벤트 콜백을 서버에서 만들어 Client Component의 `onClick`에 그대로 전달할 수는 없다. 클릭 로직은 클라이언트 쪽에 둔다.
+- React의 직렬화 범위는 단순히 `JSON.stringify`가 가능한 값만을 뜻하지 않는다. Server Function 참조 등에는 별도 규칙이 있다.
+- 비동기 데이터를 Promise로 전달하고 `use`로 읽는 스트리밍 패턴도 있다. 이번 실습은 조회 결과를 props로 전달하는 방식이다.
+
+### 2. Server / Client Component Interleaving
+
+여기서 인터리빙은 Server Component와 Client Component를 한 화면에 조합하는 패턴이다. 서버에서 준비한 UI를 Client Component의 `children` 자리에 넣는다.
+
+```tsx
+// src/components/ClientLayout.tsx
+'use client';
+
+import type { ReactNode } from 'react';
+
+export default function ClientLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="client-layout">
+      <h2>클라이언트 레이아웃</h2>
+      <div className="client-content">{children}</div>
+    </div>
+  );
+}
+```
+
+`children`은 서버에서 구성한 내용을 끼워 넣을 공간이다.
+
+```tsx
+// src/components/ServerContent.tsx — 핵심 흐름
+export default async function ServerContent() {
+  const response = await fetch('https://jsonplaceholder.typicode.com/posts/1', {
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error('게시글 조회 실패');
+  const data = await response.json();
+  return <p>서버에서 가져온 제목: {data.title}</p>;
+}
+```
+
+```tsx
+// src/app/interleaved/page.tsx
+import ClientLayout from '@/components/ClientLayout';
+import ServerContent from '@/components/ServerContent';
+
+export default function InterleavedPage() {
+  return (
+    <ClientLayout>
+      <ServerContent />
+    </ClientLayout>
+  );
+}
+```
+
+두 컴포넌트를 조합하는 `page.tsx`가 Server Component라는 점이 중요하다. `ClientLayout.tsx`에서 서버 전용 모듈을 import해서 실행하는 방식과 구분한다. 서버는 `ServerContent`의 결과를 준비하고, ClientLayout은 받은 내용을 자신의 화면 안에 배치한다.
+
+### 3. Context와 Props Drilling
+
+깊은 하위 컴포넌트에서 테마를 쓰려면 중간 컴포넌트들이 쓰지도 않는 props를 계속 전달해야 할 수 있다. 이런 전달이 반복되는 것이 Props Drilling이다.
+
+Context는 Provider 아래에서 공통 값을 읽는 방법이다. 테마·언어·사용자 정보처럼 여러 위치에서 필요한 데이터에 사용할 수 있다. 모든 상태를 Context로 올릴 필요는 없으며, 한 컴포넌트만 사용하는 값은 로컬 state로 두어도 된다.
+
+| 구성 | 역할 |
+| --- | --- |
+| `createContext` | 공유할 값의 Context 정의 |
+| `useState` | Provider 안에서 변경 가능한 상태 관리 |
+| `Context.Provider` | 하위 트리에 실제 value 제공 |
+| `useContext` | 가장 가까운 Provider의 value 읽기 |
+
+Server Component에서 클라이언트 Context를 직접 읽지는 않는다. 상태와 Context를 담당하는 Provider는 Client Component로 만들고, Server Layout에서 렌더링한다.
+
+### 4. ThemeProvider 구현
+
+```tsx
+// src/components/ThemeProvider.tsx
+'use client';
+
+import { createContext, useEffect, useState, type ReactNode } from 'react';
+
+type Theme = 'light' | 'dark';
+export const ThemeContext = createContext<{
+  theme: Theme;
+  toggleTheme: () => void;
+}>({ theme: 'light', toggleTheme: () => {} });
+
+export default function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>('light');
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((current) => current === 'light' ? 'dark' : 'light');
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+```
+
+Provider의 `value`에는 현재 상태와 상태 변경 함수를 함께 넣는다. 소비자는 Provider의 state를 직접 수정하는 대신 제공받은 함수를 호출한다. 이 함수는 클라이언트 Provider 안에서 만들어지므로 서버에서 일반 함수를 직렬화해 보내는 상황과 다르다.
+
+### 5. RootLayout 연결과 확인
+
+```text
+RootLayout (Server)
+└─ ThemeProvider (Client: theme 관리)
+   ├─ ThemeStatus (Client: 값을 읽고 버튼 표시)
+   └─ 페이지 children (Server에서 구성 가능)
+      └─ ClientLayout
+         └─ ServerContent의 렌더링 결과
+```
+
+헤더에 ThemeStatus를 두고 Provider 안에 공통 화면을 배치한다. 테마 버튼을 눌렀을 때 버튼의 글자뿐 아니라 `html`의 `data-theme`와 페이지 색상까지 바뀌는지 확인한다. 새 문서를 불러오면 메모리의 state는 초기화되며, 별도 저장 로직이 없다면 테마도 초기값으로 돌아간다.
+
+참고: [10주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조) · [첨부 11월 4일 정리](docs/lecture-materials/nov11/11월4일_강의_구간별_총정리.md)
+
+---
+
+## 2026-10-28 (Week 9)
+
+### 1. Client JavaScript Bundle 크기 줄이기
+
+화면 전체를 Client Component로 만들기보다 상태와 이벤트가 필요한 부분을 분리한다. `'use client'` 경계 아래로 import한 모듈은 클라이언트 번들에 포함될 수 있으므로, 경계를 크게 잡을수록 브라우저가 받아야 할 코드가 늘어난다.
+
+```text
+Layout (Server)
+├─ Logo (정적인 표시)
+├─ Navigation
+└─ Search (Client: 입력 상태·이벤트)
+```
+
+Search에 입력 상태가 필요하더라도 Layout 전체를 Client Component로 바꿀 필요는 없다. Logo를 서버에 두는 이유는 중요도가 낮아서가 아니라 클라이언트 상태와 이벤트가 필요하지 않기 때문이다. Server Component로 바꾼다고 이미지 파일의 크기 자체가 줄어드는 것은 아니다.
+
+### 2. Counter 컴포넌트와 페이지
+
+재사용할 UI 조각은 `components`에 두고, URL에 연결할 페이지는 `app/counter/page.tsx`에 둔다.
+
+```tsx
+// src/components/Counter.tsx
+'use client';
+
+import { useState } from 'react';
+
+export default function Counter() {
+  const [likes, setLikes] = useState(12);
+  return (
+    <section>
+      <p>{likes} likes</p>
+      <button type="button" onClick={() => setLikes((value) => value + 1)}>
+        Click me
+      </button>
+    </section>
+  );
+}
+```
+
+```tsx
+// src/app/counter/page.tsx
+import Counter from '@/components/Counter';
+
+export default function CounterPage() {
+  return <section><h1>Counter Page</h1><Counter /></section>;
+}
+```
+
+페이지는 서버에서 구성하고 클릭할 때 바뀌는 부분만 클라이언트에서 처리한다. 각 자료의 초기 숫자는 0·5·12 등으로 다르지만, `useState`와 함수형 업데이트를 연결하는 흐름은 같다.
+
+### 3. 동적 세그먼트와 LikeButton 연결
+
+```ts
+// src/lib/data.ts의 데이터 형태
+type Post = {
+  id: string;
+  title: string;
+  content: string;
+  likes: number;
+};
+
+const post: Post = {
+  id: 'nextjs',
+  title: 'Next.js 소개',
+  content: 'Next.js는 React 기반의 프레임워크입니다.',
+  likes: 10,
+};
+```
+
+`src/app/[id]/page.tsx`는 `await params`로 id를 읽고 해당 글을 찾는다. 서버에서 찾은 글의 `likes`를 Client Component로 넘긴다.
+
+```tsx
+import LikeButton from '@/ui/LikeButton';
+import { posts } from '@/lib/data';
+import { notFound } from 'next/navigation';
+
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const post = posts.find((item) => item.id === id);
+  if (!post) notFound();
+
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+      <LikeButton key={post.id} likes={post.likes} />
+    </article>
+  );
+}
+```
+
+`key={post.id}`는 다른 글로 이동했을 때 좋아요의 로컬 상태도 새 글 기준으로 시작하게 한다. `useState(likes)`는 매 렌더링마다 props로 state를 덮어쓰는 코드가 아니다.
+
+### 4. 좋아요 상태와 공통 메뉴
+
+LikeButton은 초기 숫자를 받은 뒤 클릭하면 즉시 1을 더한다. `isLiking`이 참인 동안 버튼을 비활성화하고, 수업용 지연 뒤 다시 활성화한다. 자료의 예제에는 실제 저장 API가 없으므로 새로고침하면 서버의 초기값이 다시 표시된다.
+
+공통 메뉴는 RootLayout에 둔다. 글 데이터의 id와 href를 동일하게 맞춰야 한다.
+
+```tsx
+<nav>
+  <Link href="/counter">Counter</Link>
+  <Link href="/nextjs">nextjs</Link>
+  <Link href="/routing">routing</Link>
+  <Link href="/ssr-ssg">ssr-ssg</Link>
+  <Link href="/dynamic-routes">dynamic-routes</Link>
+</nav>
+```
+
+폴더가 `[id]`여도 실제 값은 숫자일 필요가 없다. `nextjs` 같은 문자열로 데이터를 찾을 수 있다. 배열에 없는 id는 `notFound()`로 처리한다.
+
+참고: [9주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조)
+
+---
+
+## 2026-10-14 (Week 7)
+
+### 1. Server Component와 Client Component의 역할
+
+서버에서는 게시글을 조회하고, 브라우저에서는 좋아요 클릭과 상태 변경을 처리하는 예제를 작성했다. 화면을 구성하는 페이지와 상호작용을 담당하는 버튼의 역할을 나눠 보는 실습이다.
+
+| Server Component | Client Component |
+| --- | --- |
+| 데이터베이스·API 조회 | `useState`와 이벤트 핸들러 |
+| 서버 비밀값을 사용하는 처리 | `useEffect`와 브라우저 API |
+| 글의 제목·본문·초기 좋아요 전달 | 클릭에 따른 좋아요 UI 변경 |
+| 서버 렌더링과 스트리밍 | hydration 뒤 사용자와 상호작용 |
+
+```tsx
+// 서버 페이지에서 준비한 값을 클라이언트 버튼에 전달
+<LikeButton likes={post.likes} />
+```
+
+### 2. LikeButton의 두 가지 state
+
+```tsx
+const [count, setCount] = useState<number>(likes ?? 0);
+const [isLiking, setIsLiking] = useState(false);
+```
+
+- `count`: 초기 좋아요 수와 현재 화면에 표시할 숫자다.
+- `isLiking`: 요청 또는 수업용 지연을 처리 중인지 나타낸다.
+- 처리 중에는 `disabled={isLiking}`로 반복 클릭을 막고 로딩 표시를 연결할 수 있다.
+- 실제 서비스에서는 요청 성공·실패를 모두 처리하고 마지막에 대기 상태를 해제해야 한다.
+
+### 3. Falsy와 Null 병합 연산자
+
+Falsy는 Boolean 문맥에서 거짓으로 평가되는 값이다. 대표적으로 `false`, `0`, `-0`, `0n`, 빈 문자열, `null`, `undefined`, `NaN`이 있다. 빈 배열과 빈 객체는 truthy다.
+
+`||`는 왼쪽이 falsy이면 오른쪽을 선택한다. `??`는 왼쪽이 `null` 또는 `undefined`일 때만 오른쪽을 선택한다.
+
+```ts
+0 || 10;          // 10
+0 ?? 10;          // 0
+'' || '기본값';    // '기본값'
+'' ?? '기본값';    // ''
+undefined ?? 0;   // 0
+```
+
+좋아요 수가 0인 것은 정상적인 데이터이므로 `likes ?? 0`처럼 값이 빠진 경우만 보충한다.
+
+### 4. Optimistic Update와 Pessimistic Update
+
+#### 4.1 낙관적 업데이트
+
+성공할 것으로 예상하고 UI를 먼저 바꾼 뒤 요청 결과를 확인한다. 반응은 빠르지만 실패했을 때 이전 상태를 복구하는 처리가 필요하다.
+
+```text
+클릭 → 화면 숫자 증가 → 서버 요청 → 성공하면 유지
+                                  실패하면 복구·오류 표시
+```
+
+#### 4.2 비관적 업데이트
+
+요청이 성공한 뒤에 UI를 바꾼다. 응답 전까지 로딩 표시가 필요하고, 사용자는 기다려야 한다. 성공 응답을 기준으로 반영해도 네트워크 실패나 동시 수정 가능성까지 자동으로 사라지는 것은 아니다.
+
+| 비교 | 낙관적 업데이트 | 비관적 업데이트 |
+| --- | --- | --- |
+| 화면 변경 | 응답 전에 먼저 반영 | 성공 응답 뒤 반영 |
+| 체감 반응 | 빠름 | 응답 시간에 영향받음 |
+| 실패 대응 | 임시 변경 취소·오류 안내 | 기존 값 유지·오류 안내 |
+| 구현 시 주의 | rollback과 중복 요청 | 대기 상태와 중복 요청 |
+
+수업의 LikeButton은 로컬 state를 즉시 증가시키고 잠깐 비활성화하는 형태다. 실제 저장·실패 응답을 처리하지 않으므로 완전한 서버 연동 예제와는 구분한다. 응답이 늦다는 이유만으로 자동 rollback되는 것도 아니며, 실패·시간 초과 처리 코드를 직접 작성해야 한다.
+
+### 5. RSC Payload와 최초 로딩
+
+서버는 라우트의 layout과 page를 렌더링하며, Server Component 결과를 RSC Payload로 만든다. Payload에는 서버에서 준비한 결과, Client Component의 위치와 모듈 참조, 경계를 넘어 전달할 props가 담긴다.
+
+처음 접속했을 때는 다음 흐름을 따른다.
+
+1. HTML로 우선 화면을 보여준다.
+2. RSC Payload로 서버·클라이언트 컴포넌트 트리를 연결한다.
+3. 클라이언트 JavaScript가 hydration을 수행해 이벤트와 상태를 연결한다.
+
+Hydration은 서버가 만든 정적인 화면을 브라우저에서 상호작용할 수 있도록 연결하는 과정이다. Client Component도 최초 화면의 HTML 생성에 참여할 수 있으므로, `'use client'`가 서버에서 아무것도 렌더링하지 않는다는 뜻은 아니다.
+
+수업 자료에는 JSON과 바이너리의 비교도 나온다. 여기서는 RSC를 React 전용 직렬화 스트림으로 이해한다. 단순 JSON 응답과 같지 않으며, 모든 내용을 순수 이진 데이터라고 단정하거나 항상 JSON보다 빠르다고 일반화하지 않는다.
+
+### 6. 후속 내비게이션과 use client 경계
+
+Link로 이동할 때는 미리 가져오거나 캐시한 RSC Payload를 활용할 수 있다. 매번 전체 문서를 새로 받는 방식과 달리 필요한 화면을 갱신하며, 유지되는 레이아웃의 상태도 활용한다.
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+```
+
+지시문은 import보다 앞에 둔다. 이 경계 아래로 import한 모듈은 클라이언트 번들의 일부가 된다. 다만 서버 부모가 만들어 `children`으로 넘긴 UI까지 Client Component로 바뀌는 것은 아니다. 이 차이는 10주차의 인터리빙에서 다시 확인한다.
+
+참고: [7주차 대조 기록](docs/SOURCES.md#2026-11-18-날짜별-대조)
+
 ---
 
 ## 2026-10-07 (Week 6)
@@ -257,6 +829,45 @@ finally { Remove-Item Env:ANALYZE }
 
 ---
 
+
+### 5. Native History API
+
+`window.history.pushState`는 브라우저 기록을 추가하고, `replaceState`는 현재 기록을 바꾼다. Next.js App Router에서 URL 상태를 갱신할 때 사용할 수 있으며 `usePathname`·`useSearchParams`와 연결된다.
+
+```tsx
+'use client';
+
+export default function SortButton() {
+  return (
+    <button onClick={() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('sort', 'asc');
+      window.history.pushState(null, '', url);
+    }}>
+      오름차순 URL로 변경
+    </button>
+  );
+}
+```
+
+이 방식은 전체 문서를 새로 요청하는 이동과 다르다. 서버에서 데이터를 다시 조회해야 하는 화면 전환에는 Link나 router의 이동 기능이 적절한지 함께 확인한다.
+
+### 6. params 구조 분해와 타입 표기
+
+```tsx
+export default async function BlogPostPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  return <h1>{slug}</h1>;
+}
+```
+
+첫 번째 `{ params }`는 전달받은 객체에서 값을 꺼내는 구조 분해다. 콜론 뒤 `{ params: Promise<{ slug: string }> }`는 그 매개변수의 TypeScript 타입이다. 바깥 Promise는 비동기로 받을 객체를, 안쪽 `slug: string`은 그 객체 속성의 타입을 나타낸다.
+
+---
 
 ## 2026-09-30 (Week 5)
 

@@ -1,0 +1,87 @@
+.gallery-demo {
+  display: grid;
+  gap: 18px;
+}
+.gallery-demo__intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.gallery-demo__intro h2 { margin: 0 0 8px; }
+.gallery-demo__intro p, .gallery-hint, .gallery-caption {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.gallery-hint {
+  margin: 0;
+  padding: 22px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+.lecture-carousel {
+  display: grid;
+  gap: 12px;
+}
+.lecture-carousel__image-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.lecture-carousel__image {
+  display: block;
+  width: 100%;
+  height: min(54vw, 440px);
+  min-height: 220px;
+  object-fit: cover;
+}
+.lecture-carousel__counter {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .65);
+  color: white;
+  font-size: 13px;
+}
+.lecture-carousel__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lecture-carousel__controls > button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 13px;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+.lecture-carousel__dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lecture-carousel__dots button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  opacity: .45;
+  cursor: pointer;
+}
+.lecture-carousel__dots button.is-active {
+  width: 22px;
+  background: var(--link);
+  opacity: 1;
+}
+.gallery-caption { margin: 0; text-align: center; }
+.gallery-empty { color: var(--muted); }

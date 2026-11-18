@@ -1,5 +1,97 @@
 # 수업 자료 비교 및 반영 기록
 
+확인일: **2026-11-18 (Asia/Seoul)**. 사용자가 전달한 7개 GitHub 저장소의 기본 브랜치를 새로 내려받아 README와 실행 코드를 확인했다. 웹 검색의 이전 캐시 대신 실제 Git 커밋을 기준으로 비교했다. 사용자 저장소의 기존 커밋은 `cea8c8c`이며, 이번 작업 시작 시 원격과 일치했다.
+
+## 2026-11-18 저장소 확인
+
+| 저장소 | 확인한 커밋 | 커밋 시각 (KST) | 최근 수업과 변경 |
+| --- | --- | --- | --- |
+| [wpexq/React2](https://github.com/wpexq/React2) | [b7c0568](https://github.com/wpexq/React2/commit/b7c056847614600c4bb7864c25f8a6e36cd12481) | 11/11 13:51:43 | 7·9·10·11주차 노트, Context 동작 순서 |
+| [wlswodnjs/react-02](https://github.com/wlswodnjs/react-02) | [ae1be8a](https://github.com/wlswodnjs/react-02/commit/ae1be8a76bb503f9c51c37b5e428fe400d2d5365) | 11/11 12:48:52 | 7·9·10·11주차, Counter·LikeButton·Interleaving·ThemeProvider 실행 코드 |
+| [jinwooorp/React2](https://github.com/jinwooorp/React2) | [ae28831](https://github.com/jinwooorp/React2/commit/ae28831c31b7cc7fa2ecfa80f43f10dbd4a833ea) | 11/04 12:52:10 | 10/28 번들 최적화, 11/04 Context. 10/14 추가 내용 일부가 기존 1007 제목 아래에 있음 |
+| [gkfg/Daelim-React2](https://github.com/gkfg/Daelim-React2) | [ed23978](https://github.com/gkfg/Daelim-React2/commit/ed23978ddd3e01d8156e6c449c5803fe92801768) | 11/11 12:48:32 | 10/07 뒤늦은 정리, 7·9·10·11주차, 외부 컴포넌트와 Context 코드 |
+| [onejae17/React2](https://github.com/onejae17/React2) | [8faf0fe](https://github.com/onejae17/React2/commit/8faf0fe2c2508ebbf1800102468503437299629b) | 11/04 12:45:10 | 7·9·10주차 상세 노트와 코드 블록 |
+| [imdohyeon/React2](https://github.com/imdohyeon/React2) | [5ee790d](https://github.com/imdohyeon/React2/commit/5ee790d97c0ed3aff17e08c9bb2a636dddda525b) | 11/11 12:48:03 | 7·9·11주차, Context 코드 해설과 외부 컴포넌트 CSS |
+| [umteahoon/React2](https://github.com/umteahoon/React2) | [0f3884e](https://github.com/umteahoon/React2/commit/0f3884ebfa93e47253a587b8d9099005739b8fe4) | 11/11 11:44:00 | 7·9·10·11주차, Counter·LikeButton·Interleaving·ThemeProvider 코드 |
+
+확인된 최신 수업은 **2026-11-11 (Week 11)**이다. 10/21(Week 8)과 11/18(Week 12)은 확인한 자료에 해당 날짜의 수업 본문이 없다. 시험·휴강 여부도 추정하지 않고 날짜별 수업 항목을 추가하지 않았다.
+
+## 2026-11-18 첨부 ZIP 확인
+
+- 원본 파일: `nextjs_nov11_context_thirdparty_project.zip` (33,350 bytes).
+- SHA-256: `38ea129ea20f60c851bc5a7b87639d5c7d580a20e5be1fb3ebd8376370dc0f18`.
+- 내부 프로젝트: `nextjs_nov11_project`. Next.js 15.5.3 / React 19.1.1 기반이며 잠금 파일은 없었다.
+- Context, Counter, LikeButton, Server/Client 조합, 동적 게시글, 개념 카드, 이미지 갤러리 코드가 들어 있다.
+- ZIP 문서의 원본은 [lecture-materials/nov11](lecture-materials/nov11/)에 보관했다. 이 문서가 언급하는 MP4는 이번에 첨부되지 않았으므로 영상을 직접 확인하거나 음성을 검증한 것은 아니다. 문서 안의 명령·학습 과제는 자료로 읽었으며 별도의 사용자 지시로 취급하지 않았다.
+- 기존 앱을 구버전으로 되돌리지 않고 `my-next-app`에 실습 소스를 통합했다. 기존 블로그·검색 매개변수·스트리밍 경로는 유지한다.
+
+## 2026-11-18 날짜별 대조
+
+| 수업 날짜 | 종합한 내용 | 대조한 자료 |
+| --- | --- | --- |
+| 11/11 · Week 11 | Context 기본값, 유니온 타입, useEffect·data-theme, 속성 선택자, ThemeStatus, Provider 위치·갱신 순서, 외부 컴포넌트 래퍼, items·CSS·export 오류 | wpexq·wlswodnjs·gkfg·imdohyeon·umteahoon, ZIP 11/11 문서·코드 |
+| 11/04 · Week 10 | 서버→클라이언트 props와 직렬화, children 슬롯으로 인터리빙, Context·Props Drilling, ThemeProvider/ThemeStatus 연결 | wpexq·wlswodnjs·jinwooorp·gkfg·onejae17·umteahoon, ZIP 11/04 문서·코드 |
+| 10/28 · Week 9 | 작은 Client 경계로 번들 크기 줄이기, Counter, [id]와 LikeButton, 데이터·내비게이션 연결 | 7곳 전체의 노트, wlswodnjs·gkfg·umteahoon 실행 코드, ZIP 복습 코드 |
+| 10/14 · Week 7 | 서버·클라이언트 역할, count/isLiking, Falsy·??, 낙관적·비관적 업데이트, RSC·hydration·use client | 7곳 전체. jinwooorp의 10/14 커밋으로 추가된 내용은 다수 자료의 날짜와 대조 |
+| 10/07 · Week 6 보충 | 네이티브 History API, params 구조 분해와 타입 표기 | gkfg의 뒤늦은 10/07 정리. 기존 6주차 본문에 보충 |
+
+`README.md`와 `RENAMED.md`에는 같은 본문을 둔다. 사용자의 제목 `202130433 최현욱 수업기록`과 기존 1~6주차 내용을 유지하며 새 수업을 최신 날짜부터 앞에 추가했다.
+
+## 2026-11-18 코드 반영
+
+| 현재 파일·경로 | 근거 및 통합 방식 |
+| --- | --- |
+| `src/components/ThemeProvider.tsx`, `ThemeStatus.tsx` | ZIP 소스를 기반으로 wlswodnjs·gkfg·umteahoon 코드와 대조. 토글에 한국어 이름·상태 제공 |
+| `src/app/layout.tsx`, `globals.css` | 기존 메뉴·레이아웃을 유지하고 body 안에 Provider, 헤더에 테마 버튼. CSS 변수를 data-theme와 연결 |
+| `src/components/Counter.tsx`, `src/app/counter/` | ZIP의 초기값 12와 클릭 실습을 유지 |
+| `src/lib/data.ts`, `src/ui/LikeButton.tsx`, `src/app/[id]/` | ZIP의 문자열 id·초기 likes를 사용. 0 보존, 없는 글 404, 중복 클릭 방지, 타이머 정리, 글 id별 state 초기화 |
+| `src/components/ClientLayout.tsx`, `ServerContent.tsx`, `src/app/interleaved/` | ZIP과 3개 저장소의 children 조합. 서버 fetch에 5초 시간 제한·응답 확인·대체 화면, server-only 표시 |
+| `src/components/Carousel.tsx`, `src/app/carousel/` | ZIP의 추가 개념 카드 예제 유지. 강의 원본 외부 Carousel 구현이라고 주장하지 않음 |
+| `src/components/gallery/`, `src/app/gallery/` | ZIP의 로컬 대체 캐러셀 유지. items·페이지 선택·이전/다음·빈 배열, 자동 재생 시작/정지, 배열 길이 감소 처리 |
+| `src/app/page.tsx` | 새 실습 카드와 동적 게시글 목록 연결 |
+| `package.json`, `package-lock.json` | Next.js·eslint-config-next·bundle-analyzer 16.4.6으로 통일. npm 잠금 파일 유지 |
+
+캐러셀의 외부 이미지 주소와 `items` 형태는 ZIP과 같다. `next/image`에 크기와 `unoptimized`를 지정해 이 외부 샘플 이미지는 브라우저에서 직접 불러온다. 실제 `acme-carousel` 패키지는 ZIP에도 포함되지 않았으며 이번에도 설치하지 않았다. 패키지 예제는 수업 문서에, 동작 가능한 로컬 구현은 앱에 둔다.
+
+좋아요는 실습용 로컬 상태다. 서버 저장 API나 DB를 구현한 것으로 표시하지 않으며 화면에도 새로고침 시 초기화됨을 안내한다. 새 데이터의 문자열 id를 사용해 umteahoon의 일부 숫자 id 데이터와 메뉴 href가 서로 어긋나는 문제를 가져오지 않았다.
+
+## 2026-11-18 설명 보정
+
+- Interleaving은 이 수업에서 서버 UI를 클라이언트의 children 슬롯에 넣는 조합이다. 통신의 오류 분산 기술 설명을 Next.js 동작 원리로 사용하지 않았다.
+- `use client`의 import 경계와 서버에서 children으로 전달한 UI를 구분했다.
+- Context는 그 값을 소비하는 Client Component에 전달된다. Provider 하위의 모든 Server Component가 클라이언트로 바뀐다는 설명은 제외했다.
+- 렌더링·커밋 뒤 Effect가 실행되는 순서로 정리했다. `useEffect`는 서버에서 실행되지 않는다.
+- 낙관적 업데이트의 rollback은 직접 구현해야 한다. 단순 지연·로컬 숫자 증가는 실제 저장 성공을 보장하지 않는다.
+- RSC를 단순 JSON이나 항상 순수 바이너리라고 단정하지 않았다. Payload에 포함되는 렌더링 결과·모듈 참조·props를 설명했다.
+- 로고를 Server Component로 두는 기준은 상호작용 필요 여부다. 중요도나 이미지 용량 자체가 기준이라는 설명을 수정했다.
+- 외부 패키지의 `Slide` export와 CSS 경로는 첨부 문서의 예시로 구분했으며 현재 설치 API라고 단정하지 않았다.
+
+기술 대조: 설치된 Next.js 16.4.6 동봉 문서, [Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components), [useContext](https://react.dev/reference/react/useContext), [useEffect](https://react.dev/reference/react/useEffect).
+
+## 2026-11-18 의존성 및 검증
+
+기존 Next.js 16.3.8에 새 보안 공지가 확인되어 수정 버전 16.4.6으로 갱신했다. 관련 ESLint 설정과 분석 플러그인도 같은 버전으로 맞췄으며 React 19.2.8은 유지했다. 호환 범위의 `npm audit fix`를 적용했다. 운영 의존성 검사 `npm audit --omit=dev`는 **0건**이다.
+
+전체 의존성 검사에는 **high 14건**이 남아 있다. 모두 개발 도구의 picomatch 관련 의존성 경로(ESLint, micromatch, tinyglobby 등)다. npm의 강제 수정 제안은 eslint-config-next를 이전 버전으로 되돌리므로 적용하지 않았다. 설치 중 기존 unrs-resolver의 스크립트 승인 경고가 있었으나 승인 설정을 바꾸지 않았고 린트·빌드는 통과했다.
+
+- ESLint: 오류·경고 없이 통과.
+- Next.js 16.4.6 Turbopack 프로덕션 빌드 및 TypeScript 검사: 통과.
+- `ANALYZE=true` Webpack 빌드: 통과. client·nodejs·edge 분석 HTML 생성 확인. edge 번들은 없어 해당 보고서는 통계 기반 안내를 출력했다.
+- 프로덕션 HTTP 34개: 기존 경로, 새 실습, 4개 동적 글, 검색 매개변수, 없는 글·중첩 경로 404 확인.
+- prerender manifest: Blog3 글 4개 사전 생성, Blog2 상세의 동적 렌더링 유지 확인.
+- 스트리밍: 첫 청크 약 23ms, 전체 약 2,027ms. 로컬 관찰값이다.
+- JSDOM 컴포넌트 검사 26개: 테마 초기값·토글·자식 교체 후 유지, Counter, 좋아요 즉시 증가·반복 클릭 방지·재활성화·다른 글 초기화, 빈 캐러셀·이전/다음 순환·페이지 선택·자동 재생/정지·항목 감소, Gallery 열기/닫기, 개념 카드, 서버 조회 성공 및 오류 대체 화면.
+- 문서 검사: 날짜 10개와 주차 매칭·최신순, README/RENAMED 일치, 기존 1~6주차 본문 유지, 내부 파일 링크·UTF-8·코드 블록 확인.
+- 연결된 브라우저가 없어 실제 브라우저의 hydration·화면 배치·외부 이미지 표시·키보드 탐색은 검증하지 못했다. JSDOM 검사는 실제 브라우저 시각 검증을 대신하지 않는다.
+
+업데이트 배포본은 `nextjs_nov18_updated_project.zip`이다. 이번 커밋의 소스·날짜별 노트·자료 출처를 `React2/` 아래에 묶고, `.git`·`node_modules`·`.next`와 환경 변수 파일은 포함하지 않는다. 원래 전달받은 ZIP은 변경하지 않는다.
+
+---
+
+## 이전 반영 기록 (2026-10-13)
+
+아래는 10월 13일 당시의 버전과 검사 결과다. 현재 상태는 위의 11월 18일 기록을 기준으로 한다.
+
 확인일: **2026-10-13 (Asia/Seoul)**. 7개 저장소의 원격 기본 브랜치를 fetch해 이전 반영 커밋과 비교했다. GitHub 웹 검색 결과에는 이전 내용이 남아 있어, 최신 여부는 실제 원격 Git 커밋과 파일을 기준으로 확인했다.
 
 ## 저장소별 최신 상태
